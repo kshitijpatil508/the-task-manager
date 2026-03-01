@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const fs = require('fs');
 const path = require('path');
 
@@ -12,11 +13,54 @@ const JWT_SECRET = process.env.JWT_SECRET || 'tm_default_jwt_s3cret_k3y_2026';
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 const SALT_ROUNDS = 10;
+const MAX_TEXT_LENGTH = 500;
+const MAX_DESC_LENGTH = 2000;
+const MAX_IMPORT_DATES = 365;
+
+// --- Security middleware ---
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"]
+    }
+  }
+}));
+
+// General rate limit — 100 requests per 15 minutes per IP
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false }));
+
+// Stricter rate limits for auth endpoints
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Too many attempts. Please try again later.' }, standardHeaders: true, legacyHeaders: false });
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { error: 'Too many registrations. Please try again later.' }, standardHeaders: true, legacyHeaders: false });
 
 // Middleware
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// --- Validation helpers ---
+const DATE_REGEX = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+function isValidDate(d) { return DATE_REGEX.test(d); }
+
+function sanitizeTask(t) {
+  if (!t || typeof t !== 'object') return emptyTaskSlot();
+  return {
+    text: String(t.text || '').slice(0, MAX_TEXT_LENGTH),
+    description: String(t.description || '').slice(0, MAX_DESC_LENGTH),
+    status: ['Todo', 'In Progress', 'Done', 'Cancelled'].includes(t.status) ? t.status : 'Todo',
+    carryForwardCount: Math.max(0, Math.min(100, parseInt(t.carryForwardCount) || 0))
+  };
+}
+
+function validateDateParam(req, res, next) {
+  const date = req.params.date;
+  if (!isValidDate(date)) return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
+  next();
+}
 
 // --- Data helpers ---
 function readData() {
@@ -77,13 +121,13 @@ function authenticate(req, res, next) {
 
 // ============ AUTH ROUTES ============
 
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', registerLimiter, async (req, res) => {
   try {
     const { userId, password } = req.body;
     if (!userId || !password) return res.status(400).json({ error: 'userId and password are required' });
     const uid = userId.trim().toLowerCase();
     if (uid.length < 2 || uid.length > 30) return res.status(400).json({ error: 'userId must be 2-30 characters' });
-    if (password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
 
     const data = readData();
     if (!data.users) data.users = {};
@@ -107,7 +151,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', authLimiter, async (req, res) => {
   try {
     const { userId, password } = req.body;
     if (!userId || !password) return res.status(400).json({ error: 'userId and password are required' });
@@ -130,19 +174,20 @@ app.post('/api/login', async (req, res) => {
 
 // ============ TASK ROUTES ============
 
-app.get('/api/tasks/:date', authenticate, (req, res) => {
+app.get('/api/tasks/:date', authenticate, validateDateParam, (req, res) => {
   const data = readData();
   const user = ensureUserStructure(data.users[req.userId]);
   const tasks = user.tasks[req.params.date] || [emptyTaskSlot(), emptyTaskSlot(), emptyTaskSlot()];
   res.json({ tasks });
 });
 
-app.post('/api/tasks/:date', authenticate, (req, res) => {
+app.post('/api/tasks/:date', authenticate, validateDateParam, (req, res) => {
   const MAX_TASKS = 5;
   const data = readData();
   data.users[req.userId] = ensureUserStructure(data.users[req.userId]);
   let tasks = req.body.tasks || [];
-  if (tasks.length > MAX_TASKS) tasks = tasks.slice(0, MAX_TASKS);
+  if (!Array.isArray(tasks)) return res.status(400).json({ error: 'tasks must be an array' });
+  tasks = tasks.slice(0, MAX_TASKS).map(sanitizeTask);
   data.users[req.userId].tasks[req.params.date] = tasks;
   writeData(data);
   res.json({ success: true });
@@ -153,6 +198,7 @@ app.post('/api/carry-over', authenticate, (req, res) => {
   const MAX_TASKS = 5;
   const { sourceDate, targetDate } = req.body;
   if (!sourceDate || !targetDate) return res.status(400).json({ error: 'sourceDate and targetDate required' });
+  if (!isValidDate(sourceDate) || !isValidDate(targetDate)) return res.status(400).json({ error: 'Invalid date format.' });
 
   const data = readData();
   data.users[req.userId] = ensureUserStructure(data.users[req.userId]);
@@ -201,7 +247,7 @@ app.post('/api/carry-over', authenticate, (req, res) => {
   res.json({ carried, tasks: targetTasks });
 });
 
-app.get('/api/carry-over-check/:date', authenticate, (req, res) => {
+app.get('/api/carry-over-check/:date', authenticate, validateDateParam, (req, res) => {
   const MAX_TASKS = 5;
   const targetDate = req.params.date;
   const d = new Date(targetDate + 'T00:00:00');
@@ -222,14 +268,14 @@ app.get('/api/carry-over-check/:date', authenticate, (req, res) => {
 
 // ============ DAILY DATA ROUTES (doNotDo, dailyReward, brainDump, antiToDo, reflection) ============
 
-app.get('/api/daily-data/:date', authenticate, (req, res) => {
+app.get('/api/daily-data/:date', authenticate, validateDateParam, (req, res) => {
   const data = readData();
   const user = ensureUserStructure(data.users[req.userId]);
   const dd = user.dailyData[req.params.date] || emptyDailyData();
   res.json(dd);
 });
 
-app.post('/api/daily-data/:date', authenticate, (req, res) => {
+app.post('/api/daily-data/:date', authenticate, validateDateParam, (req, res) => {
   const data = readData();
   data.users[req.userId] = ensureUserStructure(data.users[req.userId]);
   const existing = data.users[req.userId].dailyData[req.params.date] || emptyDailyData();
@@ -267,7 +313,7 @@ app.post('/api/settings/password', authenticate, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new passwords required' });
-    if (newPassword.length < 4) return res.status(400).json({ error: 'New password must be at least 4 characters' });
+    if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
 
     const data = readData();
     const user = data.users[req.userId];
@@ -333,15 +379,48 @@ app.get('/api/export', authenticate, (req, res) => {
 app.post('/api/import', authenticate, (req, res) => {
   try {
     const importData = req.body;
-    if (!importData || !importData.tasks) return res.status(400).json({ error: 'Invalid import data' });
+    if (!importData || typeof importData !== 'object') return res.status(400).json({ error: 'Invalid import data' });
+    if (!importData.tasks || typeof importData.tasks !== 'object') return res.status(400).json({ error: 'Import must contain tasks object' });
+
+    // Validate and sanitize imported tasks
+    const sanitizedTasks = {};
+    const dateKeys = Object.keys(importData.tasks);
+    if (dateKeys.length > MAX_IMPORT_DATES) return res.status(400).json({ error: `Import exceeds max ${MAX_IMPORT_DATES} dates` });
+    for (const dateKey of dateKeys) {
+      if (!isValidDate(dateKey)) continue; // skip invalid date keys
+      const tasks = importData.tasks[dateKey];
+      if (!Array.isArray(tasks)) continue;
+      sanitizedTasks[dateKey] = tasks.slice(0, 5).map(sanitizeTask);
+    }
+
+    // Validate daily data if present
+    const sanitizedDaily = {};
+    if (importData.dailyData && typeof importData.dailyData === 'object') {
+      for (const dateKey of Object.keys(importData.dailyData).slice(0, MAX_IMPORT_DATES)) {
+        if (!isValidDate(dateKey)) continue;
+        const dd = importData.dailyData[dateKey];
+        if (!dd || typeof dd !== 'object') continue;
+        sanitizedDaily[dateKey] = {
+          doNotDo: Array.isArray(dd.doNotDo) ? dd.doNotDo.slice(0, 3).map(s => String(s || '').slice(0, MAX_TEXT_LENGTH)) : ['','',''],
+          dailyReward: String(dd.dailyReward || '').slice(0, MAX_TEXT_LENGTH),
+          brainDump: String(dd.brainDump || '').slice(0, MAX_DESC_LENGTH),
+          antiToDo: Array.isArray(dd.antiToDo) ? dd.antiToDo.slice(0, 20).map(s => String(s || '').slice(0, MAX_TEXT_LENGTH)) : [],
+          reflectionWell: String(dd.reflectionWell || '').slice(0, MAX_DESC_LENGTH),
+          reflectionImprove: String(dd.reflectionImprove || '').slice(0, MAX_DESC_LENGTH)
+        };
+      }
+    }
 
     const data = readData();
     data.users[req.userId] = ensureUserStructure(data.users[req.userId]);
-    if (importData.tasks) data.users[req.userId].tasks = importData.tasks;
-    if (importData.dailyData) data.users[req.userId].dailyData = importData.dailyData;
-    if (importData.northStarGoal !== undefined) data.users[req.userId].northStarGoal = importData.northStarGoal;
-    if (importData.preferences) {
-      data.users[req.userId].preferences = { ...data.users[req.userId].preferences, ...importData.preferences };
+    data.users[req.userId].tasks = sanitizedTasks;
+    if (Object.keys(sanitizedDaily).length > 0) data.users[req.userId].dailyData = sanitizedDaily;
+    if (typeof importData.northStarGoal === 'string') data.users[req.userId].northStarGoal = importData.northStarGoal.slice(0, MAX_TEXT_LENGTH);
+    if (importData.preferences && typeof importData.preferences === 'object') {
+      data.users[req.userId].preferences = {
+        darkMode: !!importData.preferences.darkMode,
+        glassmorphism: !!importData.preferences.glassmorphism
+      };
     }
     writeData(data);
     res.json({ success: true, message: 'Data imported successfully' });

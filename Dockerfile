@@ -24,7 +24,6 @@ RUN mkdir -p /data && chown node:node /data
 # Default environment variables
 ENV NODE_ENV=production \
     PORT=3000 \
-    JWT_SECRET=tm_default_jwt_s3cret_k3y_2026 \
     DATA_DIR=/data
 
 # Data volume — mount this to persist tasks across container restarts
