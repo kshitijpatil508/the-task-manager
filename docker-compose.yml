@@ -1,0 +1,18 @@
+services:
+  task-manager:
+    image: kshitijpatil508/task-manager:latest
+    container_name: task-manager
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      # Change this in production! Or leave as-is for quick local testing
+      - JWT_SECRET=tm_default_jwt_s3cret_k3y_2026
+    volumes:
+      # Persist task data outside the container
+      - task-data:/data
+
+volumes:
+  task-data:
+    driver: local
