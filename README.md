@@ -89,7 +89,7 @@ The Task Manager/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/the-task-manager.git
+git clone https://github.com/kshitijpatil508/the-task-manager.git
 cd the-task-manager
 ```
 
