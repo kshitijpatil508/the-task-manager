@@ -25,6 +25,8 @@ function switchAuthTab(tab) {
   document.getElementById('tab-login').classList.toggle('active', tab === 'login');
   document.getElementById('tab-register').classList.toggle('active', tab === 'register');
 }
+document.getElementById('tab-login').addEventListener('click', () => switchAuthTab('login'));
+document.getElementById('tab-register').addEventListener('click', () => switchAuthTab('register'));
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
