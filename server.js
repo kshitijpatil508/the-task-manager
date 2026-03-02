@@ -82,6 +82,7 @@ function ensureUserStructure(user) {
   if (!user.preferences) user.preferences = { darkMode: true, glassmorphism: true };
   if (!user.northStarGoal) user.northStarGoal = '';
   if (!user.ideaDump) user.ideaDump = [];
+  if (!user.ideaTodos) user.ideaTodos = [];
   return user;
 }
 
@@ -141,7 +142,8 @@ app.post('/api/register', registerLimiter, async (req, res) => {
       northStarGoal: '',
       tasks: {},
       dailyData: {},
-      ideaDump: []
+      ideaDump: [],
+      ideaTodos: []
     });
     writeData(data);
 
@@ -412,6 +414,64 @@ app.delete('/api/ideas/:id', authenticate, (req, res) => {
   res.json({ success: true });
 });
 
+// ============ IDEA TODO ROUTES ============
+
+app.get('/api/idea-todos', authenticate, (req, res) => {
+  const data = readData();
+  const user = ensureUserStructure(data.users[req.userId]);
+  res.json({ ideaTodos: user.ideaTodos || [] });
+});
+
+app.post('/api/idea-todos', authenticate, (req, res) => {
+  const { title } = req.body;
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+  const data = readData();
+  data.users[req.userId] = ensureUserStructure(data.users[req.userId]);
+  const todo = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    title: title.trim().slice(0, MAX_TEXT_LENGTH),
+    completed: false,
+    createdAt: new Date().toISOString()
+  };
+  data.users[req.userId].ideaTodos.push(todo);
+  writeData(data);
+  res.status(201).json({ success: true, todo });
+});
+
+app.put('/api/idea-todos/:id', authenticate, (req, res) => {
+  const { title, completed } = req.body;
+  const data = readData();
+  data.users[req.userId] = ensureUserStructure(data.users[req.userId]);
+  const todo = data.users[req.userId].ideaTodos.find(i => i.id === req.params.id);
+  if (!todo) return res.status(404).json({ error: 'Todo not found' });
+  
+  if (title !== undefined) {
+    if (typeof title !== 'string' || !title.trim()) {
+      return res.status(400).json({ error: 'Title cannot be empty' });
+    }
+    todo.title = title.trim().slice(0, MAX_TEXT_LENGTH);
+  }
+  if (completed !== undefined) {
+    todo.completed = !!completed;
+  }
+  
+  writeData(data);
+  res.json({ success: true, todo });
+});
+
+app.delete('/api/idea-todos/:id', authenticate, (req, res) => {
+  const data = readData();
+  data.users[req.userId] = ensureUserStructure(data.users[req.userId]);
+  const todos = data.users[req.userId].ideaTodos;
+  const idx = todos.findIndex(i => i.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Todo not found' });
+  todos.splice(idx, 1);
+  writeData(data);
+  res.json({ success: true });
+});
+
 // Export
 app.get('/api/export', authenticate, (req, res) => {
   const data = readData();
@@ -423,6 +483,7 @@ app.get('/api/export', authenticate, (req, res) => {
     northStarGoal: user.northStarGoal,
     preferences: user.preferences,
     ideaDump: user.ideaDump || [],
+    ideaTodos: user.ideaTodos || [],
     exportedAt: new Date().toISOString()
   };
   res.setHeader('Content-Disposition', `attachment; filename="taskmanager-${req.userId}-export.json"`);
@@ -476,6 +537,9 @@ app.post('/api/import', authenticate, (req, res) => {
         darkMode: !!importData.preferences.darkMode,
         glassmorphism: !!importData.preferences.glassmorphism
       };
+    }
+    if (Array.isArray(importData.ideaTodos)) {
+      data.users[req.userId].ideaTodos = importData.ideaTodos;
     }
     writeData(data);
     res.json({ success: true, message: 'Data imported successfully' });

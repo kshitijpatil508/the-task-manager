@@ -276,15 +276,41 @@
     </div>
 
     <!-- ===== IDEA DUMP VIEW ===== -->
-    <div id="ideas-view" class="hidden idea-dump-view">
-      <div class="flex items-center justify-between mb-5">
-        <div>
-          <h2 class="text-2xl sm:text-3xl font-bold">Idea Dump</h2>
-          <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Capture random thoughts & ideas</p>
+    <div id="ideas-view" class="hidden idea-dump-view max-w-[1440px] mx-auto px-4 sm:px-6 py-5">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left: Ideas (Takes 2 columns on lg) -->
+        <div class="lg:col-span-2 flex flex-col">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <h2 class="text-2xl sm:text-3xl font-bold">Idea Dump</h2>
+              <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Capture random thoughts & ideas</p>
+            </div>
+            <span id="ideas-count" class="text-xs text-gray-400"></span>
+          </div>
+          <div id="ideas-container" class="ideas-grid"></div>
         </div>
-        <span id="ideas-count" class="text-xs text-gray-400"></span>
+        
+        <!-- Right: To-Do List (Takes 1 column on lg) -->
+        <div class="lg:col-span-1 flex flex-col h-[calc(100vh-140px)] sticky top-24">
+          <div class="card p-5 sm:p-6 flex flex-col h-full">
+            <div class="flex items-center gap-2 mb-4 shrink-0">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <h3 class="text-lg font-bold">Idea To-Dos</h3>
+            </div>
+            
+            <div class="flex gap-2 mb-4 shrink-0">
+              <input id="idea-todo-input" type="text" placeholder="Add a new task..." class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition text-sm">
+              <button id="idea-todo-add" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-pink-500/30 active:scale-[0.97] transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              </button>
+            </div>
+            
+            <div id="idea-todo-list" class="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar"></div>
+          </div>
+        </div>
       </div>
-      <div id="ideas-container" class="ideas-grid"></div>
     </div>
   </div>
 

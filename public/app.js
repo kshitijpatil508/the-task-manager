@@ -9,6 +9,7 @@ let currentTasks = [];
 let currentDailyData = { doNotDo: ['','',''], dailyReward: '', brainDump: '', antiToDo: [], reflectionWell: '', reflectionImprove: '' };
 let northStarGoal = '';
 let currentIdeas = [];
+let currentIdeaTodos = [];
 let currentView = 'dashboard'; // 'dashboard' | 'ideas'
 const MAX_TASKS = 5;
 const DEFAULT_TASKS = 3;
@@ -86,7 +87,10 @@ function switchView(view) {
     tab.classList.toggle('active', tab.dataset.view === view);
   });
 
-  if (view === 'ideas') loadIdeas();
+  if (view === 'ideas') {
+    loadIdeas();
+    loadIdeaTodos();
+  }
 }
 
 // Bind navigation tabs
@@ -707,6 +711,139 @@ async function deleteIdea(id) {
       renderIdeas();
     }
   } catch(e) { console.error('deleteIdea:', e); }
+}
+
+// ===== IDEA TODOS =====
+
+async function loadIdeaTodos() {
+  try {
+    const res = await fetch('/api/idea-todos', { headers: headers() });
+    if (res.status === 401) { logout(); return; }
+    const data = await res.json();
+    currentIdeaTodos = data.ideaTodos || [];
+    renderIdeaTodos();
+  } catch(e) { console.error('loadIdeaTodos:', e); }
+}
+
+function renderIdeaTodos() {
+  const list = document.getElementById('idea-todo-list');
+  list.innerHTML = '';
+  
+  [...currentIdeaTodos].reverse().forEach(todo => {
+    const item = document.createElement('div');
+    item.className = `flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/30 transition-all ${todo.completed ? 'opacity-60' : 'hover:shadow-md'}`;
+    
+    // Checkbox mapping completed state
+    const checkBtn = document.createElement('button');
+    checkBtn.className = `w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center border transition-colors ${todo.completed ? 'bg-pink-500 border-pink-500' : 'border-gray-300 dark:border-gray-600 hover:border-pink-500'}`;
+    checkBtn.innerHTML = todo.completed ? `<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>` : '';
+    
+    // Title mapping
+    const titleSpan = document.createElement('span');
+    titleSpan.className = `flex-1 text-sm font-medium ${todo.completed ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-200'} cursor-pointer break-all`;
+    titleSpan.textContent = todo.title;
+    
+    // Delete btn
+    const delBtn = document.createElement('button');
+    delBtn.className = 'w-6 h-6 flex items-center justify-center rounded border border-transparent text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0';
+    item.addEventListener('mouseenter', () => delBtn.classList.remove('opacity-0'));
+    item.addEventListener('mouseleave', () => delBtn.classList.add('opacity-0'));
+    delBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
+
+    // Events
+    checkBtn.addEventListener('click', () => toggleIdeaTodo(todo.id, !todo.completed));
+    titleSpan.addEventListener('click', () => startEditIdeaTodo(todo, titleSpan));
+    delBtn.addEventListener('click', () => deleteIdeaTodo(todo.id));
+
+    item.appendChild(checkBtn);
+    item.appendChild(titleSpan);
+    item.appendChild(delBtn);
+    list.appendChild(item);
+  });
+}
+
+async function addIdeaTodo() {
+  const input = document.getElementById('idea-todo-input');
+  const title = input.value.trim();
+  if (!title) { input.focus(); return; }
+
+  try {
+    const res = await fetch('/api/idea-todos', {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ title })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      currentIdeaTodos.push(data.todo);
+      input.value = '';
+      renderIdeaTodos();
+    }
+  } catch(e) { console.error('addIdeaTodo:', e); }
+}
+
+// Bind add task
+document.getElementById('idea-todo-add').addEventListener('click', addIdeaTodo);
+document.getElementById('idea-todo-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); addIdeaTodo(); }
+});
+
+async function toggleIdeaTodo(id, completed) {
+  try {
+    const res = await fetch(`/api/idea-todos/${id}`, {
+      method: 'PUT', headers: headers(),
+      body: JSON.stringify({ completed })
+    });
+    if (res.ok) {
+      const idx = currentIdeaTodos.findIndex(t => t.id === id);
+      if (idx !== -1) currentIdeaTodos[idx].completed = completed;
+      renderIdeaTodos();
+    }
+  } catch(e) { console.error('toggleIdeaTodo:', e); }
+}
+
+async function deleteIdeaTodo(id) {
+  try {
+    const res = await fetch(`/api/idea-todos/${id}`, { method: 'DELETE', headers: headers() });
+    if (res.ok) {
+      currentIdeaTodos = currentIdeaTodos.filter(t => t.id !== id);
+      renderIdeaTodos();
+    }
+  } catch(e) { console.error('deleteIdeaTodo:', e); }
+}
+
+function startEditIdeaTodo(todo, titleSpan) {
+  if (todo.completed) return; // Don't edit completed tasks
+  
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'flex-1 text-sm font-medium px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 border-none outline-none focus:ring-1 focus:ring-pink-500 -ml-2';
+  input.value = todo.title;
+  
+  titleSpan.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const save = async () => {
+    const newTitle = input.value.trim();
+    if (newTitle && newTitle !== todo.title) {
+      try {
+        const res = await fetch(`/api/idea-todos/${todo.id}`, {
+          method: 'PUT', headers: headers(),
+          body: JSON.stringify({ title: newTitle })
+        });
+        if (res.ok) {
+          todo.title = newTitle;
+        }
+      } catch(e) { console.error('saveIdeaTodo:', e); }
+    }
+    renderIdeaTodos();
+  };
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { renderIdeaTodos(); }
+  });
 }
 
 // ===== SETTINGS =====

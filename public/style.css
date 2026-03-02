@@ -372,12 +372,6 @@ body {
 }
 
 /* ===== IDEA DUMP ===== */
-.idea-dump-view {
-  max-width: 1440px; margin: 0 auto; padding: 1.25rem 1rem;
-}
-@media (min-width: 640px) {
-  .idea-dump-view { padding: 1.25rem 1.5rem; }
-}
 
 .ideas-grid {
   display: grid;
