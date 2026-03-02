@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Task Manager</title>
   <meta name="description" content="A hyper-focused productivity system with Daily 3-5, Do Not Do list, Brain Dump, Anti-To-Do log, and reflection.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
@@ -41,7 +42,7 @@
       </form>
       <form id="register-form" class="space-y-4 hidden">
         <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">User ID</label><input id="register-userId" type="text" required placeholder="Choose a user ID (2-30 chars)" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm"></div>
-        <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Password</label><input id="register-password" type="password" required placeholder="Choose a password (4+ chars)" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm"></div>
+        <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Password</label><input id="register-password" type="password" required placeholder="Choose a password (8+ chars)" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm"></div>
         <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Confirm Password</label><input id="register-confirm" type="password" required placeholder="Confirm password" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm"></div>
         <div id="register-error" class="text-red-500 text-sm text-center hidden"></div>
         <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-sm hover:shadow-lg hover:shadow-emerald-500/30 active:scale-[0.98] transition-all duration-200">Create Account</button>
@@ -63,6 +64,17 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
+          <!-- Desktop nav tabs -->
+          <div class="app-nav-desktop" id="nav-desktop">
+            <button class="app-nav-tab active" data-view="dashboard">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+              Dashboard
+            </button>
+            <button class="app-nav-tab" data-view="ideas">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+              Idea Dump
+            </button>
+          </div>
           <span id="user-badge" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"></span>
           <button id="settings-btn" class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="Settings">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -74,179 +86,206 @@
       </div>
     </header>
 
-    <!-- NORTH STAR -->
-    <div id="north-star-bar" class="max-w-[1440px] mx-auto px-4 sm:px-6 pt-4">
-      <div class="north-star-display text-center py-2">
-        <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5">North Star</p>
-        <p id="north-star-text" class="text-sm sm:text-base font-medium text-gray-500 dark:text-gray-400 italic"></p>
-      </div>
-    </div>
+    <!-- Mobile bottom nav -->
+    <nav class="app-nav" id="nav-mobile">
+      <button class="app-nav-tab active" data-view="dashboard">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        Dashboard
+      </button>
+      <button class="app-nav-tab" data-view="ideas">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        Ideas
+      </button>
+    </nav>
 
-    <!-- CARRY-OVER BANNER -->
-    <div id="carry-over-banner" class="hidden">
-      <div class="max-w-[1440px] mx-auto px-4 sm:px-6">
-        <div class="carry-over-bar mt-3 p-4 rounded-2xl flex items-center justify-between gap-4 flex-wrap">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-              <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </div>
-            <div>
-              <p class="font-semibold text-sm">Unfinished tasks from yesterday</p>
-              <p id="carry-over-detail" class="text-xs text-gray-500 dark:text-gray-400"></p>
-            </div>
-          </div>
-          <div class="flex gap-2">
-            <button id="carry-over-accept" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-amber-500/30 active:scale-[0.97] transition-all">Carry Over</button>
-            <button id="carry-over-dismiss" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition">Dismiss</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- MAIN BENTO GRID -->
-    <main class="max-w-[1440px] mx-auto px-4 sm:px-6 py-5">
-      <div class="flex items-end justify-between mb-5">
-        <div>
-          <h2 id="selected-date-display" class="text-2xl sm:text-3xl font-bold"></h2>
-          <p id="selected-date-label" class="text-gray-500 dark:text-gray-400 text-sm mt-1"></p>
+    <!-- ===== DASHBOARD VIEW ===== -->
+    <div id="dashboard-view">
+      <!-- NORTH STAR -->
+      <div id="north-star-bar" class="max-w-[1440px] mx-auto px-4 sm:px-6 pt-4">
+        <div class="north-star-display text-center py-2">
+          <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5">North Star</p>
+          <p id="north-star-text" class="text-sm sm:text-base font-medium text-gray-500 dark:text-gray-400 italic"></p>
         </div>
       </div>
 
-      <div class="bento-grid">
-        <!-- ===== DAILY TASKS ===== -->
-        <div class="bento-tasks card p-5 sm:p-6">
-          <div class="flex items-center gap-2 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            </div>
-            <h3 class="text-lg font-bold">Daily 3</h3>
-            <span id="task-count-label" class="text-xs text-gray-400 ml-auto">3 / 5</span>
-          </div>
-          <div id="tasks-container" class="space-y-3"></div>
-          <button id="add-task-btn" class="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 text-sm font-semibold hover:border-violet-400 hover:text-violet-500 dark:hover:border-violet-500 dark:hover:text-violet-400 transition-all flex items-center justify-center gap-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Add Task
-          </button>
-          <div id="tasks-saved" class="text-xs text-green-500 mt-2 opacity-0 transition-opacity duration-300 text-right">✓ Saved</div>
-        </div>
-
-        <!-- ===== MINI CALENDAR ===== -->
-        <div class="bento-calendar card p-5 sm:p-6">
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      <!-- CARRY-OVER BANNER -->
+      <div id="carry-over-banner" class="hidden">
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6">
+          <div class="carry-over-bar mt-3 p-4 rounded-2xl flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </div>
-              <div class="flex items-center gap-1">
-                <select id="cal-month-select" class="cal-dropdown text-sm font-bold bg-transparent outline-none cursor-pointer"></select>
-                <select id="cal-year-select" class="cal-dropdown text-sm font-bold bg-transparent outline-none cursor-pointer"></select>
+              <div>
+                <p class="font-semibold text-sm">Unfinished tasks from yesterday</p>
+                <p id="carry-over-detail" class="text-xs text-gray-500 dark:text-gray-400"></p>
               </div>
             </div>
-            <div class="flex gap-1">
-              <button id="cal-prev" class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
-              <button id="cal-today" class="px-2.5 py-1 text-xs font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">Today</button>
-              <button id="cal-next" class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+            <div class="flex gap-2">
+              <button id="carry-over-accept" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-amber-500/30 active:scale-[0.97] transition-all">Carry Over</button>
+              <button id="carry-over-dismiss" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition">Dismiss</button>
             </div>
           </div>
-          <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-400 dark:text-gray-500 mb-2">
-            <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+        </div>
+      </div>
+
+      <!-- MAIN BENTO GRID -->
+      <main class="max-w-[1440px] mx-auto px-4 sm:px-6 py-5">
+        <div class="flex items-end justify-between mb-5">
+          <div>
+            <h2 id="selected-date-display" class="text-2xl sm:text-3xl font-bold"></h2>
+            <p id="selected-date-label" class="text-gray-500 dark:text-gray-400 text-sm mt-1"></p>
           </div>
-          <div id="calendar-grid" class="grid grid-cols-7 gap-1"></div>
         </div>
 
-        <!-- ===== DO NOT DO ===== -->
-        <div class="bento-donotdo card p-5 sm:p-6">
-          <div class="flex items-center gap-2 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
-              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+        <div class="bento-grid">
+          <!-- ===== DAILY TASKS ===== -->
+          <div class="bento-tasks card p-5 sm:p-6">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </div>
+              <h3 class="text-lg font-bold">Daily 3</h3>
+              <span id="task-count-label" class="text-xs text-gray-400 ml-auto">3 / 5</span>
             </div>
-            <h3 class="text-lg font-bold">Do NOT Do</h3>
-          </div>
-          <div id="donotdo-container" class="space-y-2.5">
-            <input type="text" class="donotdo-input" data-index="0" placeholder="1. I will not...">
-            <input type="text" class="donotdo-input" data-index="1" placeholder="2. I will not...">
-            <input type="text" class="donotdo-input" data-index="2" placeholder="3. I will not...">
-          </div>
-          <div id="donotdo-saved" class="text-xs text-green-500 mt-2.5 opacity-0 transition-opacity duration-300 text-right">✓ Saved</div>
-        </div>
-
-        <!-- ===== DAILY REWARD (textarea) ===== -->
-        <div class="bento-reward card p-5 sm:p-6">
-          <div class="flex items-center gap-2 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center">
-              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
-            </div>
-            <h3 class="text-lg font-bold">Daily Reward</h3>
-            <span id="reward-status" class="text-xs text-gray-400 ml-auto"></span>
-          </div>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">If I finish my 3 tasks today, my reward is:</p>
-          <textarea id="reward-input" rows="5" placeholder="e.g. Watch an episode, ice cream, guilt-free gaming, a nice walk..."
-            class="w-full p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 resize-none focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm leading-relaxed"></textarea>
-        </div>
-
-        <!-- ===== BRAIN DUMP ===== -->
-        <div class="bento-braindump card p-5 sm:p-6">
-          <div class="flex items-center gap-2 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-            </div>
-            <h3 class="text-lg font-bold">Brain Dump</h3>
-            <span id="braindump-status" class="text-xs text-gray-400 ml-auto"></span>
-          </div>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">This is where I declutter my Brain:</p>
-          <textarea id="braindump-textarea" rows="5" placeholder="Quick ideas, random thoughts, things to revisit later...&#10;&#10;This auto-saves as you type."
-            class="w-full p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 resize-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition text-sm leading-relaxed"></textarea>
-        </div>
-
-        <!-- ===== ANTI-TO-DO ===== -->
-        <div class="bento-antitodo card p-5 sm:p-6">
-          <div class="flex items-center gap-2 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </div>
-            <h3 class="text-lg font-bold">Anti-To-Do</h3>
-            <span class="text-xs text-gray-400 ml-auto">Done log</span>
-          </div>
-          <div class="flex gap-2 mb-3">
-            <input id="antitodo-input" type="text" placeholder="Log something you got done..." class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm">
-            <button id="antitodo-add" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-emerald-500/30 active:scale-[0.97] transition-all">
+            <div id="tasks-container" class="space-y-3"></div>
+            <button id="add-task-btn" class="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 text-sm font-semibold hover:border-violet-400 hover:text-violet-500 dark:hover:border-violet-500 dark:hover:text-violet-400 transition-all flex items-center justify-center gap-1.5">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Add Task
             </button>
+            <div id="tasks-saved" class="text-xs text-green-500 mt-2 opacity-0 transition-opacity duration-300 text-right">✓ Saved</div>
           </div>
-          <div id="antitodo-list" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
-        </div>
 
-        <!-- ===== END-OF-DAY REFLECTION (LOCKED, SPLIT) ===== -->
-        <div class="bento-reflection card p-5 sm:p-6" id="reflection-card">
-          <div class="flex items-center gap-2 mb-4">
-            <div id="reflection-icon" class="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center transition-all">
-              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            </div>
-            <h3 class="text-lg font-bold">End-of-Day Reflection</h3>
-            <span id="reflection-lock-label" class="text-xs text-gray-400 ml-auto">🔒 Complete all tasks</span>
-          </div>
-          <div class="relative" id="reflection-body">
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">1. What went well?</label>
-                <textarea id="reflection-well" rows="3" disabled placeholder="What worked today? What are you proud of?"
-                  class="reflection-field w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/30 resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-sm leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"></textarea>
+          <!-- ===== MINI CALENDAR ===== -->
+          <div class="bento-calendar card p-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div class="flex items-center gap-1">
+                  <select id="cal-month-select" class="cal-dropdown text-sm font-bold bg-transparent outline-none cursor-pointer"></select>
+                  <select id="cal-year-select" class="cal-dropdown text-sm font-bold bg-transparent outline-none cursor-pointer"></select>
+                </div>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">2. What could I improve?</label>
-                <textarea id="reflection-improve" rows="3" disabled placeholder="What would you do differently? What can improve?"
-                  class="reflection-field w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/30 resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-sm leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"></textarea>
+              <div class="flex gap-1">
+                <button id="cal-prev" class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                <button id="cal-today" class="px-2.5 py-1 text-xs font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">Today</button>
+                <button id="cal-next" class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
               </div>
             </div>
-            <div id="reflection-overlay" class="reflection-lock-overlay">
-              <svg class="w-8 h-8 text-gray-400 dark:text-gray-600 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-              <span class="text-xs font-medium text-gray-400 dark:text-gray-500">Finish all tasks to reflect</span>
+            <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-400 dark:text-gray-500 mb-2">
+              <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
             </div>
+            <div id="calendar-grid" class="grid grid-cols-7 gap-1"></div>
           </div>
-          <div id="reflection-saved" class="text-xs text-green-500 mt-2 opacity-0 transition-opacity duration-300 text-right">✓ Saved</div>
+
+          <!-- ===== DO NOT DO ===== -->
+          <div class="bento-donotdo card p-5 sm:p-6">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+              </div>
+              <h3 class="text-lg font-bold">Do NOT Do</h3>
+            </div>
+            <div id="donotdo-container" class="space-y-2.5">
+              <input type="text" class="donotdo-input" data-index="0" placeholder="1. I will not...">
+              <input type="text" class="donotdo-input" data-index="1" placeholder="2. I will not...">
+              <input type="text" class="donotdo-input" data-index="2" placeholder="3. I will not...">
+            </div>
+            <div id="donotdo-saved" class="text-xs text-green-500 mt-2.5 opacity-0 transition-opacity duration-300 text-right">✓ Saved</div>
+          </div>
+
+          <!-- ===== DAILY REWARD (textarea) ===== -->
+          <div class="bento-reward card p-5 sm:p-6">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
+              </div>
+              <h3 class="text-lg font-bold">Daily Reward</h3>
+              <span id="reward-status" class="text-xs text-gray-400 ml-auto"></span>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">If I finish my 3 tasks today, my reward is:</p>
+            <textarea id="reward-input" rows="5" placeholder="e.g. Watch an episode, ice cream, guilt-free gaming, a nice walk..."
+              class="w-full p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 resize-none focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm leading-relaxed"></textarea>
+          </div>
+
+          <!-- ===== BRAIN DUMP ===== -->
+          <div class="bento-braindump card p-5 sm:p-6">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+              </div>
+              <h3 class="text-lg font-bold">Brain Dump</h3>
+              <span id="braindump-status" class="text-xs text-gray-400 ml-auto"></span>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">This is where I declutter my Brain:</p>
+            <textarea id="braindump-textarea" rows="5" placeholder="Quick ideas, random thoughts, things to revisit later...&#10;&#10;This auto-saves as you type."
+              class="w-full p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 resize-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition text-sm leading-relaxed"></textarea>
+          </div>
+
+          <!-- ===== ANTI-TO-DO ===== -->
+          <div class="bento-antitodo card p-5 sm:p-6">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <h3 class="text-lg font-bold">Anti-To-Do</h3>
+              <span class="text-xs text-gray-400 ml-auto">Done log</span>
+            </div>
+            <div class="flex gap-2 mb-3">
+              <input id="antitodo-input" type="text" placeholder="Log something you got done..." class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm">
+              <button id="antitodo-add" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-emerald-500/30 active:scale-[0.97] transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              </button>
+            </div>
+            <div id="antitodo-list" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
+          </div>
+
+          <!-- ===== END-OF-DAY REFLECTION (LOCKED, SPLIT) ===== -->
+          <div class="bento-reflection card p-5 sm:p-6" id="reflection-card">
+            <div class="flex items-center gap-2 mb-4">
+              <div id="reflection-icon" class="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center transition-all">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              </div>
+              <h3 class="text-lg font-bold">End-of-Day Reflection</h3>
+              <span id="reflection-lock-label" class="text-xs text-gray-400 ml-auto">🔒 Complete all tasks</span>
+            </div>
+            <div class="relative" id="reflection-body">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">1. What went well?</label>
+                  <textarea id="reflection-well" rows="3" disabled placeholder="What worked today? What are you proud of?"
+                    class="reflection-field w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/30 resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-sm leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"></textarea>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">2. What could I improve?</label>
+                  <textarea id="reflection-improve" rows="3" disabled placeholder="What would you do differently? What can improve?"
+                    class="reflection-field w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/30 resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-sm leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"></textarea>
+                </div>
+              </div>
+              <div id="reflection-overlay" class="reflection-lock-overlay">
+                <svg class="w-8 h-8 text-gray-400 dark:text-gray-600 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                <span class="text-xs font-medium text-gray-400 dark:text-gray-500">Finish all tasks to reflect</span>
+              </div>
+            </div>
+            <div id="reflection-saved" class="text-xs text-green-500 mt-2 opacity-0 transition-opacity duration-300 text-right">✓ Saved</div>
+          </div>
         </div>
+      </main>
+    </div>
+
+    <!-- ===== IDEA DUMP VIEW ===== -->
+    <div id="ideas-view" class="hidden idea-dump-view">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-bold">Idea Dump</h2>
+          <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Capture random thoughts & ideas</p>
+        </div>
+        <span id="ideas-count" class="text-xs text-gray-400"></span>
       </div>
-    </main>
+      <div id="ideas-container" class="ideas-grid"></div>
+    </div>
   </div>
 
   <!-- ============ SETTINGS MODAL ============ -->
@@ -282,7 +321,8 @@
         <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Security</h3>
         <form id="change-password-form" class="space-y-3">
           <input id="current-password" type="password" placeholder="Current password" required class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
-          <input id="new-password" type="password" placeholder="New password" required class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
+          <input id="new-password" type="password" placeholder="New password (8+ chars)" required class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
+          <input id="confirm-new-password" type="password" placeholder="Confirm new password" required class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
           <div id="password-msg" class="text-sm text-center hidden"></div>
           <button type="submit" class="w-full py-2.5 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold text-sm hover:opacity-90 transition">Change Password</button>
         </form>

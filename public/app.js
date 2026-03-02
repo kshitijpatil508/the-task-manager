@@ -8,6 +8,8 @@ let debounceTimers = {};
 let currentTasks = [];
 let currentDailyData = { doNotDo: ['','',''], dailyReward: '', brainDump: '', antiToDo: [], reflectionWell: '', reflectionImprove: '' };
 let northStarGoal = '';
+let currentIdeas = [];
+let currentView = 'dashboard'; // 'dashboard' | 'ideas'
 const MAX_TASKS = 5;
 const DEFAULT_TASKS = 3;
 
@@ -70,6 +72,28 @@ function showDashboard() {
   updateNorthStarDisplay(); loadDay(); buildCalendar(); loadTaskDates(); checkCarryOver();
 }
 
+// ===== NAVIGATION =====
+function switchView(view) {
+  currentView = view;
+  const dashView = document.getElementById('dashboard-view');
+  const ideasView = document.getElementById('ideas-view');
+
+  dashView.classList.toggle('hidden', view !== 'dashboard');
+  ideasView.classList.toggle('hidden', view !== 'ideas');
+
+  // Update all nav tabs (both desktop and mobile)
+  document.querySelectorAll('.app-nav-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.view === view);
+  });
+
+  if (view === 'ideas') loadIdeas();
+}
+
+// Bind navigation tabs
+document.querySelectorAll('.app-nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchView(tab.dataset.view));
+});
+
 // ===== NORTH STAR =====
 function updateNorthStarDisplay() {
   const el = document.getElementById('north-star-text');
@@ -90,7 +114,7 @@ function updateDateDisplay() {
   document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-US', opts);
 }
 
-// ===== TASKS (expandable, max 5) =====
+// ===== TASKS (expandable, max 5, accordion, delete for 4/5) =====
 async function loadTasks(ds) {
   try {
     const res = await fetch(`/api/tasks/${ds}`, { headers: headers() });
@@ -114,6 +138,13 @@ function renderTasks() {
   currentTasks.forEach((task, i) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'task-item';
+
+    // Delete button HTML — only for slots 4 and 5 (index 3 and 4)
+    const deleteBtn = i >= 3 ? `
+      <button class="task-delete-btn" data-idx="${i}" title="Remove task">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      </button>` : '';
+
     wrapper.innerHTML = `
       <div class="task-row">
         <div class="task-number task-number-${i+1}">${i+1}</div>
@@ -128,8 +159,9 @@ function renderTasks() {
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
         </div>
+        ${deleteBtn}
       </div>
-      <div class="task-desc-wrapper ${task.description ? '' : 'hidden'}" data-idx="${i}">
+      <div class="task-desc-wrapper" data-idx="${i}">
         <textarea class="task-desc-area" data-idx="${i}" rows="2" placeholder="Add notes...">${escHtml(task.description)}</textarea>
       </div>`;
     container.appendChild(wrapper);
@@ -143,13 +175,36 @@ function renderTasks() {
   // Bind events
   container.querySelectorAll('.task-input').forEach(el => el.addEventListener('input', onTaskChange));
   container.querySelectorAll('.task-desc-area').forEach(el => el.addEventListener('input', onTaskChange));
+
+  // Accordion — single expand: clicking one collapses all others
   container.querySelectorAll('.task-desc-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = btn.dataset.idx;
-      const wrapper = container.querySelector(`.task-desc-wrapper[data-idx="${idx}"]`);
-      wrapper.classList.toggle('hidden'); btn.classList.toggle('active');
+      const targetWrapper = container.querySelector(`.task-desc-wrapper[data-idx="${idx}"]`);
+      const isExpanding = !targetWrapper.classList.contains('expanded');
+
+      // Collapse all descriptions first
+      container.querySelectorAll('.task-desc-wrapper').forEach(w => w.classList.remove('expanded'));
+      container.querySelectorAll('.task-desc-toggle').forEach(b => b.classList.remove('active'));
+
+      // Expand the clicked one (if it wasn't already open)
+      if (isExpanding) {
+        targetWrapper.classList.add('expanded');
+        btn.classList.add('active');
+      }
     });
   });
+
+  // Delete buttons for tasks 4/5
+  container.querySelectorAll('.task-delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      currentTasks.splice(idx, 1);
+      saveTasks();
+      renderTasks();
+    });
+  });
+
   container.querySelectorAll('.status-btn').forEach(btn => {
     btn.addEventListener('click', (e) => { e.stopPropagation(); openStatusDropdown(parseInt(btn.dataset.idx), btn); });
   });
@@ -471,6 +526,189 @@ function showToast(message, type = 'info') {
   }, 5000);
 }
 
+// ===== IDEA DUMP =====
+async function loadIdeas() {
+  try {
+    const res = await fetch('/api/ideas', { headers: headers() });
+    if (res.status === 401) { logout(); return; }
+    const data = await res.json();
+    currentIdeas = data.ideas || [];
+    renderIdeas();
+  } catch(e) { console.error('loadIdeas:', e); }
+}
+
+function renderIdeas() {
+  const container = document.getElementById('ideas-container');
+  container.innerHTML = '';
+  document.getElementById('ideas-count').textContent = currentIdeas.length > 0 ? `${currentIdeas.length} idea${currentIdeas.length !== 1 ? 's' : ''}` : '';
+
+  // Add new idea card (always first)
+  const addCard = document.createElement('div');
+  addCard.className = 'idea-add-card card';
+  addCard.innerHTML = `
+    <input type="text" class="idea-add-input" id="idea-title-input" placeholder="Idea title..." maxlength="500">
+    <textarea class="idea-add-textarea" id="idea-body-input" rows="3" placeholder="Describe your idea..."></textarea>
+    <button class="idea-add-btn" id="idea-submit-btn">
+      <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Save Idea
+    </button>`;
+  container.appendChild(addCard);
+
+  // Bind add idea
+  const submitBtn = addCard.querySelector('#idea-submit-btn');
+  submitBtn.addEventListener('click', addIdea);
+  addCard.querySelector('#idea-title-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addIdea(); }
+  });
+
+  // Render existing ideas (newest first)
+  [...currentIdeas].reverse().forEach(idea => {
+    const card = document.createElement('div');
+    card.className = 'idea-card card';
+    const dateStr = idea.createdAt ? new Date(idea.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    card.innerHTML = `
+      <div class="idea-title" data-id="${idea.id}" title="Click to edit">${escHtml(idea.title)}</div>
+      <div class="idea-body" data-id="${idea.id}" title="Click to edit">${idea.body ? escHtml(idea.body) : '<span style="color:#6b7280;font-style:italic">Click to add notes...</span>'}</div>
+      <div class="idea-meta">
+        <span class="idea-date">${dateStr}</span>
+        <div class="flex items-center gap-1">
+          <button class="idea-edit-btn" data-id="${idea.id}" title="Edit idea">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </button>
+          <button class="idea-delete-btn" data-id="${idea.id}" title="Delete idea">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
+      </div>`;
+    container.appendChild(card);
+
+    // Inline edit: click title to edit
+    const titleEl = card.querySelector('.idea-title');
+    titleEl.style.cursor = 'pointer';
+    titleEl.addEventListener('click', () => startInlineEdit(idea, card, 'title'));
+
+    // Inline edit: click body to edit
+    const bodyEl = card.querySelector('.idea-body');
+    bodyEl.style.cursor = 'pointer';
+    bodyEl.addEventListener('click', () => startInlineEdit(idea, card, 'body'));
+  });
+
+  // Bind edit buttons
+  container.querySelectorAll('.idea-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const idea = currentIdeas.find(i => i.id === id);
+      const card = btn.closest('.idea-card');
+      if (idea && card) startInlineEdit(idea, card, 'title');
+    });
+  });
+
+  // Bind delete
+  container.querySelectorAll('.idea-delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteIdea(btn.dataset.id));
+  });
+}
+
+function startInlineEdit(idea, card, field) {
+  // Avoid double-editing
+  if (card.querySelector('.idea-edit-input, .idea-edit-textarea')) return;
+
+  if (field === 'title') {
+    const titleEl = card.querySelector('.idea-title');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'idea-edit-input';
+    input.value = idea.title;
+    input.maxLength = 500;
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const save = () => {
+      const newTitle = input.value.trim();
+      if (newTitle && newTitle !== idea.title) {
+        saveIdeaEdit(idea.id, newTitle, idea.body);
+      } else {
+        renderIdeas(); // Revert if empty
+      }
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { renderIdeas(); }
+    });
+  } else {
+    const bodyEl = card.querySelector('.idea-body');
+    const textarea = document.createElement('textarea');
+    textarea.className = 'idea-edit-textarea';
+    textarea.value = idea.body || '';
+    textarea.rows = 3;
+    textarea.placeholder = 'Add notes...';
+    bodyEl.replaceWith(textarea);
+    textarea.focus();
+
+    const save = () => {
+      const newBody = textarea.value.trim();
+      if (newBody !== (idea.body || '')) {
+        saveIdeaEdit(idea.id, idea.title, newBody);
+      } else {
+        renderIdeas();
+      }
+    };
+    textarea.addEventListener('blur', save);
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { renderIdeas(); }
+    });
+  }
+}
+
+async function saveIdeaEdit(id, title, body) {
+  try {
+    const res = await fetch(`/api/ideas/${id}`, {
+      method: 'PUT', headers: headers(),
+      body: JSON.stringify({ title, body })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const idx = currentIdeas.findIndex(i => i.id === id);
+      if (idx !== -1) currentIdeas[idx] = { ...currentIdeas[idx], title: data.idea.title, body: data.idea.body };
+      renderIdeas();
+      showToast('✏️ Idea updated', 'success');
+    }
+  } catch(e) { console.error('saveIdeaEdit:', e); renderIdeas(); }
+}
+
+async function addIdea() {
+  const titleInput = document.getElementById('idea-title-input');
+  const bodyInput = document.getElementById('idea-body-input');
+  const title = titleInput.value.trim();
+  if (!title) { titleInput.focus(); return; }
+
+  try {
+    const res = await fetch('/api/ideas', {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ title, body: bodyInput.value.trim() })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      currentIdeas.push(data.idea);
+      titleInput.value = ''; bodyInput.value = '';
+      renderIdeas();
+      showToast('💡 Idea saved!', 'success');
+    }
+  } catch(e) { console.error('addIdea:', e); }
+}
+
+async function deleteIdea(id) {
+  try {
+    const res = await fetch(`/api/ideas/${id}`, { method: 'DELETE', headers: headers() });
+    if (res.ok) {
+      currentIdeas = currentIdeas.filter(i => i.id !== id);
+      renderIdeas();
+    }
+  } catch(e) { console.error('deleteIdea:', e); }
+}
+
 // ===== SETTINGS =====
 document.getElementById('settings-btn').addEventListener('click', () => { document.getElementById('settings-modal').classList.remove('hidden'); document.getElementById('north-star-input').value = northStarGoal || ''; });
 document.getElementById('settings-close').addEventListener('click', () => { document.getElementById('settings-modal').classList.add('hidden'); });
@@ -490,17 +728,38 @@ document.getElementById('north-star-save').addEventListener('click', async () =>
   northStarGoal = document.getElementById('north-star-input').value.trim(); updateNorthStarDisplay();
   try { await fetch('/api/settings/north-star', { method: 'POST', headers: headers(), body: JSON.stringify({ northStarGoal }) }); } catch {}
 });
+
+// Change password with Confirm validation
 document.getElementById('change-password-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const msgEl = document.getElementById('password-msg');
+  const newPw = document.getElementById('new-password').value;
+  const confirmPw = document.getElementById('confirm-new-password').value;
+
+  // Frontend validation: new passwords must match
+  if (newPw !== confirmPw) {
+    msgEl.textContent = 'New passwords do not match';
+    msgEl.className = 'text-sm text-center text-red-500';
+    msgEl.classList.remove('hidden');
+    setTimeout(() => msgEl.classList.add('hidden'), 3000);
+    return;
+  }
+
   try {
-    const res = await fetch('/api/settings/password', { method: 'POST', headers: headers(), body: JSON.stringify({ currentPassword: document.getElementById('current-password').value, newPassword: document.getElementById('new-password').value }) });
+    const res = await fetch('/api/settings/password', { method: 'POST', headers: headers(), body: JSON.stringify({ currentPassword: document.getElementById('current-password').value, newPassword: newPw }) });
     const data = await res.json(); msgEl.classList.remove('hidden');
-    if (res.ok) { msgEl.textContent = '✓ Password changed'; msgEl.className = 'text-sm text-center text-green-500'; }
+    if (res.ok) {
+      msgEl.textContent = '✓ Password changed';
+      msgEl.className = 'text-sm text-center text-green-500';
+      document.getElementById('current-password').value = '';
+      document.getElementById('new-password').value = '';
+      document.getElementById('confirm-new-password').value = '';
+    }
     else { msgEl.textContent = data.error; msgEl.className = 'text-sm text-center text-red-500'; }
     setTimeout(() => msgEl.classList.add('hidden'), 3000);
   } catch { msgEl.textContent = 'Error'; msgEl.className = 'text-sm text-center text-red-500'; msgEl.classList.remove('hidden'); }
 });
+
 document.getElementById('export-btn').addEventListener('click', async () => {
   try {
     const res = await fetch('/api/export', { headers: headers() }); const blob = await res.blob();

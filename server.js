@@ -79,8 +79,9 @@ function writeData(data) {
 function ensureUserStructure(user) {
   if (!user.tasks) user.tasks = {};
   if (!user.dailyData) user.dailyData = {};
-  if (!user.preferences) user.preferences = { darkMode: false, glassmorphism: false };
+  if (!user.preferences) user.preferences = { darkMode: true, glassmorphism: true };
   if (!user.northStarGoal) user.northStarGoal = '';
+  if (!user.ideaDump) user.ideaDump = [];
   return user;
 }
 
@@ -136,10 +137,11 @@ app.post('/api/register', registerLimiter, async (req, res) => {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     data.users[uid] = ensureUserStructure({
       passwordHash,
-      preferences: { darkMode: false, glassmorphism: false },
+      preferences: { darkMode: true, glassmorphism: true },
       northStarGoal: '',
       tasks: {},
-      dailyData: {}
+      dailyData: {},
+      ideaDump: []
     });
     writeData(data);
 
@@ -358,6 +360,58 @@ app.get('/api/settings/north-star', authenticate, (req, res) => {
   res.json({ northStarGoal: user.northStarGoal || '' });
 });
 
+// ============ IDEA DUMP ROUTES ============
+
+app.get('/api/ideas', authenticate, (req, res) => {
+  const data = readData();
+  const user = ensureUserStructure(data.users[req.userId]);
+  res.json({ ideas: user.ideaDump || [] });
+});
+
+app.post('/api/ideas', authenticate, (req, res) => {
+  const { title, body } = req.body;
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+  const data = readData();
+  data.users[req.userId] = ensureUserStructure(data.users[req.userId]);
+  const idea = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    title: title.trim().slice(0, MAX_TEXT_LENGTH),
+    body: (body || '').trim().slice(0, MAX_DESC_LENGTH),
+    createdAt: new Date().toISOString()
+  };
+  data.users[req.userId].ideaDump.push(idea);
+  writeData(data);
+  res.status(201).json({ success: true, idea });
+});
+
+app.put('/api/ideas/:id', authenticate, (req, res) => {
+  const { title, body } = req.body;
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+  const data = readData();
+  data.users[req.userId] = ensureUserStructure(data.users[req.userId]);
+  const idea = data.users[req.userId].ideaDump.find(i => i.id === req.params.id);
+  if (!idea) return res.status(404).json({ error: 'Idea not found' });
+  idea.title = title.trim().slice(0, MAX_TEXT_LENGTH);
+  idea.body = (body || '').trim().slice(0, MAX_DESC_LENGTH);
+  writeData(data);
+  res.json({ success: true, idea });
+});
+
+app.delete('/api/ideas/:id', authenticate, (req, res) => {
+  const data = readData();
+  data.users[req.userId] = ensureUserStructure(data.users[req.userId]);
+  const ideas = data.users[req.userId].ideaDump;
+  const idx = ideas.findIndex(i => i.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Idea not found' });
+  ideas.splice(idx, 1);
+  writeData(data);
+  res.json({ success: true });
+});
+
 // Export
 app.get('/api/export', authenticate, (req, res) => {
   const data = readData();
@@ -368,6 +422,7 @@ app.get('/api/export', authenticate, (req, res) => {
     dailyData: user.dailyData,
     northStarGoal: user.northStarGoal,
     preferences: user.preferences,
+    ideaDump: user.ideaDump || [],
     exportedAt: new Date().toISOString()
   };
   res.setHeader('Content-Disposition', `attachment; filename="taskmanager-${req.userId}-export.json"`);
