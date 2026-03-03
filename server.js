@@ -8,6 +8,9 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
+// Trust the first reverse-proxy hop (Nginx / Traefik / Cloudflare)
+// so that express-rate-limit sees the real client IP instead of the proxy IP.
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'tm_default_jwt_s3cret_k3y_2026';
 const DATA_DIR = process.env.DATA_DIR || __dirname;
@@ -31,8 +34,17 @@ app.use(helmet({
   }
 }));
 
-// General rate limit — 100 requests per 15 minutes per IP
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false }));
+// Dedicated health endpoint — no rate limiting, used by Docker HEALTHCHECK
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
+// General rate limit — 300 requests per 15 minutes per IP
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/api/health'
+}));
 
 // Stricter rate limits for auth endpoints
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Too many attempts. Please try again later.' }, standardHeaders: true, legacyHeaders: false });
@@ -550,7 +562,7 @@ app.post('/api/import', authenticate, (req, res) => {
 });
 
 // ============ FALLBACK ============
-app.get('/{*splat}', (req, res) => {
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
