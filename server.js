@@ -562,7 +562,7 @@ app.post('/api/import', authenticate, (req, res) => {
 });
 
 // ============ FALLBACK ============
-app.get('*', (req, res) => {
+app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
