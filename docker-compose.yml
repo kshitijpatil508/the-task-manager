@@ -1,5 +1,18 @@
 services:
+  mongodb_container:
+    image: mongo:latest
+    container_name: mongodb_container
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password123
+    volumes:
+      - mongodb_data:/data/db
+
   task-manager:
+    build: .
     image: kshitijpatil508/task-manager:latest
     container_name: task-manager
     restart: unless-stopped
@@ -7,12 +20,12 @@ services:
       - "3000:3000"
     environment:
       - PORT=3000
-      # Change this in production! Or leave as-is for quick local testing
-      - JWT_SECRET=tm_default_jwt_s3cret_k3y_2026
-    volumes:
-      # Persist task data outside the container
-      - task-data:/data
+      - MONGODB_URI=mongodb://admin:password123@mongodb_container:27017/taskmanager?authSource=admin
+      - ADMIN_USER=admin
+      - ADMIN_PASS=Admin@1234
+    depends_on:
+      - mongodb_container
 
 volumes:
-  task-data:
+  mongodb_data:
     driver: local

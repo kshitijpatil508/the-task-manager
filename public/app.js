@@ -10,14 +10,19 @@ let currentDailyData = { doNotDo: ['','',''], dailyReward: '', brainDump: '', an
 let northStarGoal = '';
 let currentIdeas = [];
 let currentIdeaTodos = [];
-let currentView = 'dashboard'; // 'dashboard' | 'ideas'
-const MAX_TASKS = 5;
+let showDoneIdeaTodos = false;
+let currentNotes = [];
+let activeNoteId = null;
+let activeIdeaId = null;
+let currentView = 'dashboard'; // 'dashboard' | 'ideas' | 'notes'
+const MAX_TASKS = 21;
 const DEFAULT_TASKS = 3;
 
 // ===== HELPERS =====
 function fmt(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function headers() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }; }
 function debounce(key, fn, ms = 800) { clearTimeout(debounceTimers[key]); debounceTimers[key] = setTimeout(fn, ms); }
+function isPastDate() { return fmt(selectedDate) < fmt(new Date()); }
 function showSaved(id) { const el = document.getElementById(id); if (!el) return; el.style.opacity = '1'; setTimeout(() => el.style.opacity = '0', 1500); }
 function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -34,10 +39,24 @@ document.getElementById('tab-register').addEventListener('click', () => switchAu
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const errEl = document.getElementById('login-error'); errEl.classList.add('hidden');
+  const userId = document.getElementById('login-userId').value;
+  const password = document.getElementById('login-password').value;
+  const pinInput = document.getElementById('login-pin').value;
   try {
-    const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: document.getElementById('login-userId').value, password: document.getElementById('login-password').value }) });
+    const res = await fetch('/api/login', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ userId, password, pin: pinInput }) 
+    });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error; errEl.classList.remove('hidden'); return; }
+    if (!res.ok) { 
+      errEl.textContent = data.error; 
+      errEl.classList.remove('hidden'); 
+      if (res.status === 429) {
+        document.getElementById('login-pin-container').classList.remove('hidden');
+      }
+      return; 
+    }
     loginSuccess(data);
   } catch { errEl.textContent = 'Connection error'; errEl.classList.remove('hidden'); }
 });
@@ -46,9 +65,14 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
   e.preventDefault();
   const errEl = document.getElementById('register-error'); errEl.classList.add('hidden');
   const pw = document.getElementById('register-password').value;
+  const pin = document.getElementById('register-pin').value;
   if (pw !== document.getElementById('register-confirm').value) { errEl.textContent = 'Passwords do not match'; errEl.classList.remove('hidden'); return; }
   try {
-    const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: document.getElementById('register-userId').value, password: pw }) });
+    const res = await fetch('/api/register', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ userId: document.getElementById('register-userId').value, password: pw, pin }) 
+    });
     const data = await res.json();
     if (!res.ok) { errEl.textContent = data.error; errEl.classList.remove('hidden'); return; }
     loginSuccess(data);
@@ -63,7 +87,6 @@ function loginSuccess(data) {
 
 function applyPreferences(prefs) {
   document.documentElement.classList.toggle('dark', !!prefs.darkMode);
-  document.body.classList.toggle('glassmorphism', !!prefs.glassmorphism);
 }
 
 function showDashboard() {
@@ -78,9 +101,11 @@ function switchView(view) {
   currentView = view;
   const dashView = document.getElementById('dashboard-view');
   const ideasView = document.getElementById('ideas-view');
+  const notesView = document.getElementById('notes-view');
 
   dashView.classList.toggle('hidden', view !== 'dashboard');
   ideasView.classList.toggle('hidden', view !== 'ideas');
+  notesView.classList.toggle('hidden', view !== 'notes');
 
   // Update all nav tabs (both desktop and mobile)
   document.querySelectorAll('.app-nav-tab').forEach(tab => {
@@ -90,6 +115,8 @@ function switchView(view) {
   if (view === 'ideas') {
     loadIdeas();
     loadIdeaTodos();
+  } else if (view === 'notes') {
+    loadNotes();
   }
 }
 
@@ -139,12 +166,13 @@ async function loadTasks(ds) {
 function renderTasks() {
   const container = document.getElementById('tasks-container');
   container.innerHTML = '';
+  const past = isPastDate();
   currentTasks.forEach((task, i) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'task-item';
 
     // Delete button HTML — only for slots 4 and 5 (index 3 and 4)
-    const deleteBtn = i >= 3 ? `
+    const deleteBtn = (i >= 3 && !past) ? `
       <button class="task-delete-btn" data-idx="${i}" title="Remove task">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
       </button>` : '';
@@ -152,13 +180,13 @@ function renderTasks() {
     wrapper.innerHTML = `
       <div class="task-row">
         <div class="task-number task-number-${i+1}">${i+1}</div>
-        <input type="text" class="task-input" data-idx="${i}" placeholder="Task ${i+1}..." value="${escHtml(task.text)}">
+        <input type="text" class="task-input" data-idx="${i}" placeholder="Task ${i+1}..." value="${escHtml(task.text)}" ${past ? 'disabled' : ''}>
         ${(task.carryForwardCount||0) > 0 ? `<span class="carry-badge">↻${task.carryForwardCount}</span>` : ''}
         <button class="task-desc-toggle ${task.description ? 'active' : ''}" data-idx="${i}" title="Toggle description">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
         </button>
         <div class="status-dropdown-wrapper" data-idx="${i}">
-          <button class="status-btn ${statusClass(task.status)}" data-idx="${i}">
+          <button class="status-btn ${statusClass(task.status)}" data-idx="${i}" ${past ? 'disabled' : ''}>
             ${escHtml(statusLabel(task.status))}
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
@@ -166,15 +194,18 @@ function renderTasks() {
         ${deleteBtn}
       </div>
       <div class="task-desc-wrapper" data-idx="${i}">
-        <textarea class="task-desc-area" data-idx="${i}" rows="2" placeholder="Add notes...">${escHtml(task.description)}</textarea>
+        <textarea class="task-desc-area" data-idx="${i}" rows="2" placeholder="Add notes..." ${past ? 'disabled' : ''}>${escHtml(task.description)}</textarea>
       </div>`;
     container.appendChild(wrapper);
   });
 
   // Update count label & add-task button
-  document.getElementById('task-count-label').textContent = `${currentTasks.length} / ${MAX_TASKS}`;
+  const filledCount = currentTasks.filter(t => t.text && t.text.trim()).length;
+  const displayMax = Math.max(DEFAULT_TASKS, Math.min(currentTasks.length, MAX_TASKS));
+  document.getElementById('task-count-label').textContent = `${filledCount} / ${displayMax}`;
   const addBtn = document.getElementById('add-task-btn');
-  addBtn.classList.toggle('hidden', currentTasks.length >= MAX_TASKS);
+  if (past) addBtn.classList.add('hidden');
+  else addBtn.classList.toggle('hidden', currentTasks.length >= MAX_TASKS);
 
   // Bind events
   container.querySelectorAll('.task-input').forEach(el => el.addEventListener('input', onTaskChange));
@@ -257,6 +288,7 @@ function statusLabel(s) {
 }
 
 function openStatusDropdown(idx, btnEl) {
+  if (isPastDate()) return;
   closeAllDropdowns();
   const wrapper = btnEl.closest('.status-dropdown-wrapper');
   const menu = document.createElement('div');
@@ -296,11 +328,16 @@ async function loadDailyData(ds) {
 
 function renderDailyData() {
   const dnds = currentDailyData.doNotDo || ['','',''];
-  document.querySelectorAll('.donotdo-input').forEach((el, i) => { el.value = dnds[i] || ''; });
-  document.getElementById('reward-input').value = currentDailyData.dailyReward || '';
-  document.getElementById('braindump-textarea').value = currentDailyData.brainDump || '';
+  const past = isPastDate();
+  document.querySelectorAll('.donotdo-input').forEach((el, i) => { el.value = dnds[i] || ''; el.disabled = past; });
+  const rewardEl = document.getElementById('reward-input');
+  rewardEl.value = currentDailyData.dailyReward || ''; rewardEl.disabled = past;
+  const brainEl = document.getElementById('braindump-textarea');
+  brainEl.value = currentDailyData.brainDump || ''; brainEl.disabled = past;
   document.getElementById('reflection-well').value = currentDailyData.reflectionWell || '';
   document.getElementById('reflection-improve').value = currentDailyData.reflectionImprove || '';
+  document.getElementById('antitodo-input').disabled = past;
+  document.getElementById('antitodo-add').disabled = past;
   renderAntiToDo();
 }
 
@@ -357,13 +394,14 @@ async function saveDailyField(fields, savedId) {
 function renderAntiToDo() {
   const list = document.getElementById('antitodo-list');
   list.innerHTML = '';
+  const past = isPastDate();
   (currentDailyData.antiToDo || []).forEach((item, i) => {
     const div = document.createElement('div');
     div.className = 'antitodo-item';
     div.innerHTML = `
       <svg class="w-4 h-4 antitodo-check" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
       <span class="flex-1 text-sm">${escHtml(item)}</span>
-      <span class="antitodo-remove" data-idx="${i}">✕</span>`;
+      ${past ? '' : `<span class="antitodo-remove" data-idx="${i}">✕</span>`}`;
     list.appendChild(div);
   });
   list.querySelectorAll('.antitodo-remove').forEach(btn => {
@@ -377,6 +415,7 @@ function renderAntiToDo() {
 document.getElementById('antitodo-add').addEventListener('click', addAntiToDo);
 document.getElementById('antitodo-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addAntiToDo(); } });
 function addAntiToDo() {
+  if (isPastDate()) return;
   const input = document.getElementById('antitodo-input');
   const val = input.value.trim(); if (!val) return;
   if (!currentDailyData.antiToDo) currentDailyData.antiToDo = [];
@@ -384,27 +423,43 @@ function addAntiToDo() {
   renderAntiToDo(); saveDailyField({ antiToDo: currentDailyData.antiToDo });
 }
 
-// ===== REFLECTION LOCK (all EXISTING tasks must be Done) =====
+// ===== REFLECTION LOCK (unlocks after 6pm today) =====
 function checkReflectionUnlock() {
   const card = document.getElementById('reflection-card');
   const wellTA = document.getElementById('reflection-well');
   const improveTA = document.getElementById('reflection-improve');
   const lockLabel = document.getElementById('reflection-lock-label');
+  const overlayEl = card.querySelector('#reflection-body > .absolute');
 
-  const filledTasks = currentTasks.filter(t => t.text && t.text.trim() !== '');
-  const allDone = filledTasks.length > 0 && filledTasks.every(t => t.status === 'Done');
+  const now = new Date();
+  const hour = now.getHours();
+  const isToday = fmt(selectedDate) === fmt(now);
+  const past = isPastDate();
 
-  if (allDone) {
+  // Unlock: after 6pm today, OR any past date
+  const unlocked = past || (isToday && hour >= 18);
+
+  if (unlocked) {
     card.classList.add('reflection-unlocked');
-    wellTA.disabled = false; improveTA.disabled = false;
-    lockLabel.textContent = '🔓 Unlocked!';
+    wellTA.disabled = !!past; improveTA.disabled = !!past;
+    if (past) {
+      lockLabel.textContent = '🔓 Read Only';
+    } else {
+      lockLabel.textContent = '🔓 Unlocked!';
+    }
     lockLabel.classList.add('text-purple-500');
+    lockLabel.classList.remove('text-gray-400');
   } else {
     card.classList.remove('reflection-unlocked');
     wellTA.disabled = true; improveTA.disabled = true;
-    const doneCount = filledTasks.filter(t => t.status === 'Done').length;
-    lockLabel.textContent = `🔒 ${doneCount}/${filledTasks.length} tasks done`;
+    // Calculate hours remaining
+    const hoursLeft = 18 - hour;
+    const minsLeft = 60 - now.getMinutes();
+    lockLabel.textContent = hoursLeft > 0
+      ? `🔒 Unlocks at 6:00 PM (~${hoursLeft}h left)`
+      : `🔒 Unlocks at 6:00 PM (~${minsLeft}m left)`;
     lockLabel.classList.remove('text-purple-500');
+    lockLabel.classList.add('text-gray-400');
   }
 }
 
@@ -530,7 +585,8 @@ function showToast(message, type = 'info') {
   }, 5000);
 }
 
-// ===== IDEA DUMP =====
+// ===== IDEAS =====
+
 async function loadIdeas() {
   try {
     const res = await fetch('/api/ideas', { headers: headers() });
@@ -544,164 +600,138 @@ async function loadIdeas() {
 function renderIdeas() {
   const container = document.getElementById('ideas-container');
   container.innerHTML = '';
-  document.getElementById('ideas-count').textContent = currentIdeas.length > 0 ? `${currentIdeas.length} idea${currentIdeas.length !== 1 ? 's' : ''}` : '';
+  document.getElementById('ideas-count').textContent = `${currentIdeas.length} ideas`;
 
-  // Add new idea card (always first)
   const addCard = document.createElement('div');
-  addCard.className = 'idea-add-card card';
+  addCard.className = 'idea-card card hover:border-violet-300 dark:hover:border-violet-700 transition cursor-pointer border-dashed border-2 bg-transparent';
   addCard.innerHTML = `
-    <input type="text" class="idea-add-input" id="idea-title-input" placeholder="Idea title..." maxlength="500">
-    <textarea class="idea-add-textarea" id="idea-body-input" rows="3" placeholder="Describe your idea..."></textarea>
-    <button class="idea-add-btn" id="idea-submit-btn">
-      <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-      Save Idea
-    </button>`;
+    <div class="idea-title text-gray-400 italic font-normal">Type new idea here...</div>
+    <div class="idea-body opacity-50 text-gray-400">Click to expand and save</div>
+    <div class="idea-meta mt-auto pt-3 border-t border-gray-100 dark:border-gray-800/50">
+      <span class="idea-date">Now</span>
+    </div>`;
   container.appendChild(addCard);
-
-  // Bind add idea
-  const submitBtn = addCard.querySelector('#idea-submit-btn');
-  submitBtn.addEventListener('click', addIdea);
-  addCard.querySelector('#idea-title-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); addIdea(); }
+  addCard.addEventListener('click', () => {
+    openIdeaModal(null);
   });
 
   // Render existing ideas (newest first)
   [...currentIdeas].reverse().forEach(idea => {
     const card = document.createElement('div');
-    card.className = 'idea-card card';
+    card.className = 'idea-card card hover:border-violet-300 dark:hover:border-violet-700 transition';
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.idea-delete-btn')) return;
+      openIdeaModal(idea.id);
+    });
+    
     const dateStr = idea.createdAt ? new Date(idea.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     card.innerHTML = `
-      <div class="idea-title" data-id="${idea.id}" title="Click to edit">${escHtml(idea.title)}</div>
-      <div class="idea-body" data-id="${idea.id}" title="Click to edit">${idea.body ? escHtml(idea.body) : '<span style="color:#6b7280;font-style:italic">Click to add notes...</span>'}</div>
-      <div class="idea-meta">
+      <div class="idea-title" title="${escHtml(idea.title)}">${escHtml(idea.title)}</div>
+      <div class="idea-body opacity-80" title="${idea.body ? escHtml(idea.body) : ''}">${idea.body ? escHtml(idea.body) : '<span style="color:#6b7280;font-style:italic">No notes...</span>'}</div>
+      <div class="idea-meta mt-auto pt-3 border-t border-gray-100 dark:border-gray-800/50">
         <span class="idea-date">${dateStr}</span>
-        <div class="flex items-center gap-1">
-          <button class="idea-edit-btn" data-id="${idea.id}" title="Edit idea">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-          </button>
-          <button class="idea-delete-btn" data-id="${idea.id}" title="Delete idea">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          </button>
-        </div>
+        <button class="idea-delete-btn" data-id="${idea.id}" title="Delete idea">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
       </div>`;
     container.appendChild(card);
-
-    // Inline edit: click title to edit
-    const titleEl = card.querySelector('.idea-title');
-    titleEl.style.cursor = 'pointer';
-    titleEl.addEventListener('click', () => startInlineEdit(idea, card, 'title'));
-
-    // Inline edit: click body to edit
-    const bodyEl = card.querySelector('.idea-body');
-    bodyEl.style.cursor = 'pointer';
-    bodyEl.addEventListener('click', () => startInlineEdit(idea, card, 'body'));
-  });
-
-  // Bind edit buttons
-  container.querySelectorAll('.idea-edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const idea = currentIdeas.find(i => i.id === id);
-      const card = btn.closest('.idea-card');
-      if (idea && card) startInlineEdit(idea, card, 'title');
-    });
   });
 
   // Bind delete
   container.querySelectorAll('.idea-delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => deleteIdea(btn.dataset.id));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteIdea(btn.dataset.id);
+    });
   });
 }
 
-function startInlineEdit(idea, card, field) {
-  // Avoid double-editing
-  if (card.querySelector('.idea-edit-input, .idea-edit-textarea')) return;
+// Idea Modal Logic
+const ideaModal = document.getElementById('idea-modal');
+const ideaModalTitle = document.getElementById('idea-modal-title');
+const ideaModalBody = document.getElementById('idea-modal-body');
 
-  if (field === 'title') {
-    const titleEl = card.querySelector('.idea-title');
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'idea-edit-input';
-    input.value = idea.title;
-    input.maxLength = 500;
-    titleEl.replaceWith(input);
-    input.focus();
-    input.select();
-
-    const save = () => {
-      const newTitle = input.value.trim();
-      if (newTitle && newTitle !== idea.title) {
-        saveIdeaEdit(idea.id, newTitle, idea.body);
-      } else {
-        renderIdeas(); // Revert if empty
-      }
-    };
-    input.addEventListener('blur', save);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-      if (e.key === 'Escape') { renderIdeas(); }
-    });
+function openIdeaModal(id) {
+  activeIdeaId = id;
+  const titleEl = document.getElementById('idea-modal-title');
+  const bodyEl = document.getElementById('idea-modal-body');
+  
+  if (id) {
+    const idea = currentIdeas.find(i => i.id === id);
+    if (!idea) return;
+    titleEl.value = idea.title;
+    bodyEl.value = idea.body || '';
   } else {
-    const bodyEl = card.querySelector('.idea-body');
-    const textarea = document.createElement('textarea');
-    textarea.className = 'idea-edit-textarea';
-    textarea.value = idea.body || '';
-    textarea.rows = 3;
-    textarea.placeholder = 'Add notes...';
-    bodyEl.replaceWith(textarea);
-    textarea.focus();
-
-    const save = () => {
-      const newBody = textarea.value.trim();
-      if (newBody !== (idea.body || '')) {
-        saveIdeaEdit(idea.id, idea.title, newBody);
-      } else {
-        renderIdeas();
-      }
-    };
-    textarea.addEventListener('blur', save);
-    textarea.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { renderIdeas(); }
-    });
+    titleEl.value = '';
+    bodyEl.value = '';
   }
+  
+  ideaModal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  if(!id) titleEl.focus();
 }
 
-async function saveIdeaEdit(id, title, body) {
-  try {
-    const res = await fetch(`/api/ideas/${id}`, {
-      method: 'PUT', headers: headers(),
-      body: JSON.stringify({ title, body })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const idx = currentIdeas.findIndex(i => i.id === id);
-      if (idx !== -1) currentIdeas[idx] = { ...currentIdeas[idx], title: data.idea.title, body: data.idea.body };
-      renderIdeas();
-      showToast('✏️ Idea updated', 'success');
-    }
-  } catch(e) { console.error('saveIdeaEdit:', e); renderIdeas(); }
+function closeIdeaModal() {
+  ideaModal.classList.add('hidden');
+  document.body.style.overflow = '';
 }
 
-async function addIdea() {
-  const titleInput = document.getElementById('idea-title-input');
-  const bodyInput = document.getElementById('idea-body-input');
-  const title = titleInput.value.trim();
-  if (!title) { titleInput.focus(); return; }
+document.getElementById('idea-modal-close').addEventListener('click', closeIdeaModal);
+document.getElementById('idea-modal-delete').addEventListener('click', () => {
+  if (activeIdeaId) deleteIdea(activeIdeaId);
+  closeIdeaModal();
+});
 
-  try {
-    const res = await fetch('/api/ideas', {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ title, body: bodyInput.value.trim() })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      currentIdeas.push(data.idea);
-      titleInput.value = ''; bodyInput.value = '';
-      renderIdeas();
-      showToast('💡 Idea saved!', 'success');
-    }
-  } catch(e) { console.error('addIdea:', e); }
-}
+document.getElementById('idea-modal-save').addEventListener('click', async () => {
+  const title = ideaModalTitle.value.trim();
+  const body = ideaModalBody.value.trim();
+  if (!title) { ideaModalTitle.focus(); return; }
+  
+  const statusEl = document.getElementById('idea-modal-status');
+  statusEl.style.opacity = '1';
+  
+  if (activeIdeaId) {
+    // Update existing
+    try {
+      const res = await fetch(`/api/ideas/${activeIdeaId}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({ title, body })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const idx = currentIdeas.findIndex(i => i.id === activeIdeaId);
+        if (idx !== -1) currentIdeas[idx] = { ...currentIdeas[idx], title: data.idea.title, body: data.idea.body };
+        renderIdeas();
+        statusEl.textContent = '✓ Saved';
+        setTimeout(() => closeIdeaModal(), 400);
+      }
+    } catch(e) { console.error('saveIdea:', e); }
+  } else {
+    // Create new
+    try {
+      const res = await fetch('/api/ideas', {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({ title, body })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentIdeas.push(data.idea);
+        renderIdeas();
+        statusEl.textContent = '✓ Created';
+        setTimeout(() => closeIdeaModal(), 400);
+      }
+    } catch(e) { console.error('addIdea:', e); }
+  }
+  
+  setTimeout(() => statusEl.style.opacity = '0', 1000);
+});
+
+// Hide modal on backdrop click
+ideaModal.addEventListener('click', (e) => {
+  if (e.target === ideaModal) closeIdeaModal();
+});
+
+
 
 async function deleteIdea(id) {
   try {
@@ -729,7 +759,16 @@ function renderIdeaTodos() {
   const list = document.getElementById('idea-todo-list');
   list.innerHTML = '';
   
+  const filterBtn = document.getElementById('idea-todo-filter-btn');
+  if (filterBtn) {
+    filterBtn.textContent = showDoneIdeaTodos ? 'Show Active' : 'Show Done';
+  }
+
   [...currentIdeaTodos].reverse().forEach(todo => {
+    // Check if we should render this todo based on current filter state
+    if (showDoneIdeaTodos && !todo.completed) return;
+    if (!showDoneIdeaTodos && todo.completed) return;
+
     const item = document.createElement('div');
     item.className = `flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/30 transition-all ${todo.completed ? 'opacity-60' : 'hover:shadow-md'}`;
     
@@ -761,6 +800,11 @@ function renderIdeaTodos() {
     list.appendChild(item);
   });
 }
+
+document.getElementById('idea-todo-filter-btn')?.addEventListener('click', () => {
+  showDoneIdeaTodos = !showDoneIdeaTodos;
+  renderIdeaTodos();
+});
 
 async function addIdeaTodo() {
   const input = document.getElementById('idea-todo-input');
@@ -847,7 +891,7 @@ function startEditIdeaTodo(todo, titleSpan) {
 }
 
 // ===== SETTINGS =====
-document.getElementById('settings-btn').addEventListener('click', () => { document.getElementById('settings-modal').classList.remove('hidden'); document.getElementById('north-star-input').value = northStarGoal || ''; });
+document.getElementById('user-badge').addEventListener('click', () => { document.getElementById('settings-modal').classList.remove('hidden'); document.getElementById('north-star-input').value = northStarGoal || ''; });
 document.getElementById('settings-close').addEventListener('click', () => { document.getElementById('settings-modal').classList.add('hidden'); });
 document.getElementById('settings-modal').addEventListener('click', (e) => { if (e.target === e.currentTarget) document.getElementById('settings-modal').classList.add('hidden'); });
 
@@ -856,11 +900,7 @@ document.getElementById('settings-theme-toggle').addEventListener('click', async
   document.documentElement.classList.toggle('dark', isDark);
   try { await fetch('/api/settings/preferences', { method: 'POST', headers: headers(), body: JSON.stringify({ darkMode: isDark }) }); } catch {}
 });
-document.getElementById('settings-glass-toggle').addEventListener('click', async () => {
-  const isGlass = !document.body.classList.contains('glassmorphism');
-  document.body.classList.toggle('glassmorphism', isGlass);
-  try { await fetch('/api/settings/preferences', { method: 'POST', headers: headers(), body: JSON.stringify({ glassmorphism: isGlass }) }); } catch {}
-});
+
 document.getElementById('north-star-save').addEventListener('click', async () => {
   northStarGoal = document.getElementById('north-star-input').value.trim(); updateNorthStarDisplay();
   try { await fetch('/api/settings/north-star', { method: 'POST', headers: headers(), body: JSON.stringify({ northStarGoal }) }); } catch {}
@@ -897,32 +937,535 @@ document.getElementById('change-password-form').addEventListener('submit', async
   } catch { msgEl.textContent = 'Error'; msgEl.className = 'text-sm text-center text-red-500'; msgEl.classList.remove('hidden'); }
 });
 
-document.getElementById('export-btn').addEventListener('click', async () => {
+document.getElementById('export-btn').addEventListener('click', () => { window.location.href = `/api/export?token=${token}`; });
+  const importInput = document.getElementById('import-input');
+  importInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const formData = new FormData(); formData.append('importFile', file);
+    const errEl = document.getElementById('data-msg'); errEl.className = 'text-sm text-center mt-2 hidden';
+    try {
+      const res = await fetch('/api/import', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error; errEl.classList.remove('hidden', 'text-green-500'); errEl.classList.add('text-rose-500'); }
+      else { errEl.textContent = 'Import successful! Reloading...'; errEl.classList.remove('hidden', 'text-rose-500'); errEl.classList.add('text-green-500'); setTimeout(() => window.location.reload(), 1500); }
+    } catch(err) { console.error('Import err:', err); errEl.textContent = 'Import failed'; errEl.classList.remove('hidden', 'text-green-500'); errEl.classList.add('text-rose-500'); }
+    importInput.value = '';
+  });
+  
+  // Danger Zone - Delete Account
+  const delBtn = document.getElementById('delete-account-btn');
+  const delConfirmBlock = document.getElementById('delete-account-confirm');
+  const delCancel = document.getElementById('delete-account-cancel');
+  const delFinal = document.getElementById('delete-account-final');
+  const delMsg = document.getElementById('delete-account-msg');
+  const delPwd = document.getElementById('delete-account-password');
+
+  delBtn.addEventListener('click', () => {
+    delBtn.classList.add('hidden');
+    delConfirmBlock.classList.remove('hidden');
+    delConfirmBlock.classList.add('flex');
+    delMsg.classList.add('hidden');
+    delPwd.value = '';
+    delPwd.focus();
+  });
+
+  delCancel.addEventListener('click', () => {
+    delConfirmBlock.classList.add('hidden');
+    delConfirmBlock.classList.remove('flex');
+    delBtn.classList.remove('hidden');
+  });
+
+  delFinal.addEventListener('click', async () => {
+    const password = delPwd.value;
+    if (!password) {
+      delMsg.textContent = 'Password is required to delete account';
+      delMsg.classList.remove('hidden');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/account', {
+        method: 'DELETE',
+        headers: headers(),
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        logout();
+      } else {
+        delMsg.textContent = data.error || 'Failed to delete account';
+        delMsg.classList.remove('hidden');
+      }
+    } catch (e) {
+      delMsg.textContent = 'Connection error';
+      delMsg.classList.remove('hidden');
+    }
+  });
+
+// ===== NOTES VIEW LOGIC =====
+
+async function loadNotes() {
   try {
-    const res = await fetch('/api/export', { headers: headers() }); const blob = await res.blob();
-    const url = URL.createObjectURL(blob); const a = document.createElement('a');
-    a.href = url; a.download = `taskmanager-${currentUserId}-export.json`; a.click(); URL.revokeObjectURL(url);
-  } catch(e) { console.error('export:', e); }
-});
-document.getElementById('import-input').addEventListener('change', async (e) => {
-  const file = e.target.files[0]; if (!file) return;
-  const msgEl = document.getElementById('data-msg');
+    const res = await fetch('/api/notes', { headers: headers() });
+    if (res.status === 401) { logout(); return; }
+    const data = await res.json();
+    currentNotes = data.notes || [];
+    renderNotesList();
+    if (currentNotes.length > 0 && !activeNoteId) {
+      selectNote(currentNotes[currentNotes.length - 1].id);
+    } else if (activeNoteId && currentNotes.find(n => n.id === activeNoteId)) {
+      selectNote(activeNoteId);
+    } else {
+      selectNote(null);
+    }
+  } catch(e) { console.error('loadNotes:', e); }
+}
+
+function renderNotesList() {
+  const list = document.getElementById('notes-list');
+  list.innerHTML = '';
+  
+  [...currentNotes].reverse().forEach(note => {
+    const item = document.createElement('div');
+    const isActive = note.id === activeNoteId;
+    item.className = `p-3 rounded-xl cursor-pointer transition flex flex-col gap-1 ${isActive ? 'bg-violet-100 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'}`;
+    
+    const dateStr = note.updatedAt ? new Date(note.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    item.innerHTML = `
+      <div class="font-semibold text-sm truncate ${isActive ? 'text-violet-700 dark:text-violet-300' : ''}">${escHtml(note.title)}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 flex justify-between">
+        <span class="truncate pr-4">${note.content ? escHtml(note.content).substring(0, 30) + '...' : 'Empty...'}</span>
+        <span class="shrink-0 flex items-center">${dateStr}</span>
+      </div>
+    `;
+    item.addEventListener('click', () => selectNote(note.id));
+    list.appendChild(item);
+  });
+}
+
+function selectNote(id) {
+  activeNoteId = id;
+  const noteEmpty = document.getElementById('note-editor-empty');
+  const noteEditor = document.getElementById('note-editor');
+  
+  renderNotesList(); // update active state in list
+  
+  if (!id) {
+    noteEmpty.classList.remove('hidden');
+    noteEditor.classList.add('hidden');
+    noteEditor.classList.remove('flex');
+    return;
+  }
+  
+  const note = currentNotes.find(n => n.id === id);
+  if (!note) return;
+  
+  noteEmpty.classList.add('hidden');
+  noteEditor.classList.remove('hidden');
+  noteEditor.classList.add('flex');
+  
+  const titleInput = document.getElementById('note-title-input');
+  const contentInput = document.getElementById('note-content-input');
+  titleInput.value = note.title;
+  contentInput.value = note.content || '';
+}
+
+document.getElementById('add-note-btn').addEventListener('click', async () => {
   try {
-    const text = await file.text(); const json = JSON.parse(text);
-    const res = await fetch('/api/import', { method: 'POST', headers: headers(), body: JSON.stringify(json) });
-    const data = await res.json(); msgEl.classList.remove('hidden');
-    if (res.ok) { msgEl.textContent = '✓ Data imported'; msgEl.className = 'text-sm text-center text-green-500'; loadDay(); }
-    else { msgEl.textContent = data.error; msgEl.className = 'text-sm text-center text-red-500'; }
-    setTimeout(() => msgEl.classList.add('hidden'), 3000);
-  } catch { msgEl.textContent = 'Invalid JSON file'; msgEl.className = 'text-sm text-center text-red-500'; msgEl.classList.remove('hidden'); }
-  e.target.value = '';
+    const res = await fetch('/api/notes', {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ title: 'Untitled Note', content: '' })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      currentNotes.push(data.note);
+      selectNote(data.note.id);
+      document.getElementById('note-title-input').focus();
+      document.getElementById('note-title-input').select();
+    }
+  } catch(e) { console.error('createNote:', e); }
 });
+
+document.getElementById('note-delete-btn').addEventListener('click', () => {
+  if (!activeNoteId) return;
+  
+  const modal = document.getElementById('confirm-modal');
+  document.getElementById('confirm-modal-title').textContent = 'Delete Note?';
+  const okBtn = document.getElementById('confirm-modal-ok');
+  
+  modal.classList.remove('hidden');
+  
+  const handleConfirm = async () => {
+    modal.classList.add('hidden');
+    cleanup();
+    try {
+      const res = await fetch(`/api/notes/${activeNoteId}`, { method: 'DELETE', headers: headers() });
+      if (res.ok) {
+        currentNotes = currentNotes.filter(n => n.id !== activeNoteId);
+        activeNoteId = null;
+        if (currentNotes.length > 0) selectNote(currentNotes[currentNotes.length - 1].id);
+        else selectNote(null);
+      }
+    } catch(e) { console.error('deleteNote:', e); }
+  };
+  
+  const handleCancel = () => {
+    modal.classList.add('hidden');
+    cleanup();
+  };
+
+  const cleanup = () => {
+    okBtn.removeEventListener('click', handleConfirm);
+    document.getElementById('confirm-modal-cancel').removeEventListener('click', handleCancel);
+  };
+  
+  okBtn.addEventListener('click', handleConfirm);
+  document.getElementById('confirm-modal-cancel').addEventListener('click', handleCancel);
+});
+
+const saveNoteChanges = async () => {
+  if (!activeNoteId) return;
+  const title = document.getElementById('note-title-input').value.trim() || 'Untitled Note';
+  const content = document.getElementById('note-content-input').value;
+  
+  const status = document.getElementById('note-save-status');
+  status.textContent = 'Saving...';
+  status.style.opacity = '1';
+
+  try {
+    const res = await fetch(`/api/notes/${activeNoteId}`, {
+      method: 'PUT', headers: headers(),
+      body: JSON.stringify({ title, content })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const idx = currentNotes.findIndex(n => n.id === activeNoteId);
+      if (idx !== -1) currentNotes[idx] = data.note;
+      
+      status.textContent = 'Saved';
+      setTimeout(() => status.style.opacity = '0', 1000);
+      renderNotesList(); // Refresh sidebar titles
+    }
+  } catch(e) { console.error('saveNote:', e); status.textContent = 'Error'; }
+};
+
+document.getElementById('note-title-input').addEventListener('input', () => debounce('saveNote', saveNoteChanges, 600));
+document.getElementById('note-content-input').addEventListener('input', () => debounce('saveNote', saveNoteChanges, 600));
+
+// ===== COUNTDOWN TIMER =====
+let timerInterval = null;
+let timerSeconds = 0;
+let timerState = 'idle'; // idle | running | paused
+let timerAlarmCtx = null;
+let timerAlarmTimeout = null;
+let timerEndEpoch = 0;
+let scheduledAlarmNodes = []; // Pre-scheduled AudioContext beeps for background playback
+let alarmNeedsSchedule = false; // Set when timer is restored but audio isn't unlocked yet
+
+// Pre-create/unlock AudioContext on user gesture for background support
+let globalTimerAudioCtx = null;
+
+function unlockAudio() {
+  if (!globalTimerAudioCtx) {
+    globalTimerAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (globalTimerAudioCtx.state === 'suspended') {
+    globalTimerAudioCtx.resume();
+  }
+  // If a timer was restored from localStorage before audio was unlocked, schedule now
+  if (alarmNeedsSchedule && timerState === 'running' && timerEndEpoch > Date.now()) {
+    alarmNeedsSchedule = false;
+    scheduleAlarmAtEnd();
+  }
+}
+
+// Ensure audio is unlocked on the very first click anywhere
+window.addEventListener('click', unlockAudio, { once: true });
+
+// Persist timer across tabs/refresh via localStorage
+const TIMER_LS_KEY = 'tm_timer';
+
+function saveTimerState() {
+  const stateObj = { endEpoch: timerEndEpoch, state: timerState };
+  if (timerState === 'paused') stateObj.secondsLeft = timerSeconds;
+  
+  if (timerState === 'idle') {
+    localStorage.removeItem(TIMER_LS_KEY);
+  } else {
+    localStorage.setItem(TIMER_LS_KEY, JSON.stringify(stateObj));
+  }
+  
+  // Sync with server if logged in
+  if (token) {
+    fetch('/api/timer', { method: 'POST', headers: headers(), body: JSON.stringify(timerState === 'idle' ? {} : stateObj) }).catch(()=>{});
+  }
+}
+
+async function restoreTimerState() {
+  // First load from localStorage for instant UI feedback
+  const raw = localStorage.getItem(TIMER_LS_KEY);
+  let saved = raw ? JSON.parse(raw) : null;
+  
+  // Try to load auth-synced timer from server
+  if (token) {
+    try {
+      const res = await fetch('/api/timer', { headers: headers() });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.timerState && Object.keys(data.timerState).length > 0) {
+          // Server state overrides local state if it's newer (we just trust server for multi-device sync)
+          saved = data.timerState;
+          localStorage.setItem(TIMER_LS_KEY, JSON.stringify(saved));
+        } else if (raw) {
+          // Server is empty, but we have local state. Overwrite server.
+          saveTimerState();
+        }
+      }
+    } catch (e) { console.warn('Timer sync fail'); }
+  }
+
+  if (!saved) return;
+  try {
+    if (saved.state === 'running' && saved.endEpoch) {
+      const remaining = Math.round((saved.endEpoch - Date.now()) / 1000);
+      if (remaining > 0) {
+        timerEndEpoch = saved.endEpoch;
+        timerSeconds = remaining;
+        timerState = 'running';
+        updateTimerDisplay();
+        timerInterval = setInterval(timerTick, 1000);
+        alarmNeedsSchedule = true;
+      } else {
+        localStorage.removeItem(TIMER_LS_KEY);
+        timerSeconds = 0; timerState = 'idle';
+        updateTimerDisplay();
+        triggerTimerAlarm();
+        if (token) saveTimerState();
+      }
+    } else if (saved.state === 'paused' && saved.secondsLeft > 0) {
+      timerSeconds = saved.secondsLeft;
+      timerState = 'paused';
+      updateTimerDisplay();
+    }
+  } catch { localStorage.removeItem(TIMER_LS_KEY); }
+}
+
+function updateTimerDisplay() {
+  const display = document.getElementById('timer-display');
+  const m = Math.floor(timerSeconds / 60);
+  const s = timerSeconds % 60;
+  display.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  
+  display.classList.remove('timer-running','timer-paused','timer-done');
+  if (timerState === 'running') display.classList.add('timer-running');
+  else if (timerState === 'paused') display.classList.add('timer-paused');
+  
+  const btn = document.getElementById('timer-start-btn');
+  if (timerState === 'idle') btn.textContent = 'Start';
+  else if (timerState === 'running') btn.textContent = 'Pause';
+  else if (timerState === 'paused') btn.textContent = 'Resume';
+}
+
+// Pre-schedule alarm beeps into the AudioContext so they play even in background tabs.
+// AudioContext scheduling is NOT throttled by background tab policies.
+function scheduleAlarmAtEnd() {
+  cancelScheduledAlarm();
+  try {
+    const ctx = globalTimerAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    globalTimerAudioCtx = ctx;
+
+    const secsUntilEnd = Math.max(0, (timerEndEpoch - Date.now()) / 1000);
+    const alarmStartTime = ctx.currentTime + secsUntilEnd;
+
+    for (let i = 0; i < 60; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.value = 0.4;
+      osc.start(alarmStartTime + i * 0.5);
+      osc.stop(alarmStartTime + i * 0.5 + 0.2);
+      scheduledAlarmNodes.push(osc);
+    }
+  } catch(e) { console.error('scheduleAlarmAtEnd failed:', e); }
+}
+
+function cancelScheduledAlarm() {
+  scheduledAlarmNodes.forEach(osc => { try { osc.stop(); } catch {} });
+  scheduledAlarmNodes = [];
+}
+
+function triggerTimerAlarm() {
+  // Also fire immediate alarm (for when tab comes back to foreground after expiry)
+  try {
+    const ctx = globalTimerAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    globalTimerAudioCtx = ctx;
+    
+    const playBeep = (offset) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.value = 0.4;
+      osc.start(ctx.currentTime + offset);
+      osc.stop(ctx.currentTime + offset + 0.2);
+    };
+    for (let i = 0; i < 60; i++) playBeep(i * 0.5);
+    timerAlarmCtx = ctx;
+    timerAlarmTimeout = setTimeout(stopTimerAlarm, 30500);
+  } catch(e) { console.error('Audio failed:', e); }
+
+  // Show dismissable alarm banner
+  const existing = document.getElementById('timer-alarm-banner');
+  if (existing) existing.remove();
+
+  const banner = document.createElement('div');
+  banner.id = 'timer-alarm-banner';
+  banner.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[300] bg-gradient-to-r from-pink-600 to-rose-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 max-w-sm';
+  banner.innerHTML = `
+    <span class="text-2xl">⏰</span>
+    <div class="flex-1">
+      <p class="font-bold text-sm">Timer Finished!</p>
+      <p class="text-xs opacity-80">Sound playing for 30 seconds…</p>
+    </div>
+    <button id="timer-alarm-close" class="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-semibold transition">Close</button>
+  `;
+  document.body.appendChild(banner);
+  document.getElementById('timer-alarm-close').addEventListener('click', stopTimerAlarm);
+  setTimeout(() => { if (document.getElementById('timer-alarm-banner')) document.getElementById('timer-alarm-banner').remove(); }, 31000);
+}
+
+function stopTimerAlarm() {
+  cancelScheduledAlarm();
+  if (timerAlarmCtx) {
+    try { timerAlarmCtx.close(); } catch {}
+    timerAlarmCtx = null;
+    globalTimerAudioCtx = null; // Force re-create on next use
+  }
+  if (timerAlarmTimeout) { clearTimeout(timerAlarmTimeout); timerAlarmTimeout = null; }
+  const banner = document.getElementById('timer-alarm-banner');
+  if (banner) banner.remove();
+}
+
+function timerTick() {
+  const now = Date.now();
+  const left = Math.round((timerEndEpoch - now) / 1000);
+  
+  if (left <= 0) {
+    timerSeconds = 0;
+    updateTimerDisplay();
+    clearInterval(timerInterval); timerInterval = null;
+    timerState = 'idle';
+    document.getElementById('timer-display').classList.add('timer-done');
+    document.getElementById('timer-start-btn').textContent = 'Start';
+    localStorage.removeItem(TIMER_LS_KEY);
+    triggerTimerAlarm();
+    return;
+  }
+  timerSeconds = left;
+  updateTimerDisplay();
+  saveTimerState();
+}
+
+// When user returns to tab, immediately sync the display
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && timerState === 'running') {
+    timerTick(); // Force an immediate tick to catch up the UI
+  }
+});
+
+document.getElementById('timer-start-btn').addEventListener('click', () => {
+  unlockAudio();
+  if (timerState === 'idle') {
+    const input = document.getElementById('timer-minutes-input');
+    const mins = parseInt(input.value);
+    if (!mins || mins < 1) { input.focus(); return; }
+    const now = new Date();
+    const midnight = new Date(now); midnight.setHours(24, 0, 0, 0);
+    const maxSecs = Math.floor((midnight - now) / 1000);
+    timerSeconds = Math.min(mins * 60, maxSecs);
+    timerEndEpoch = Date.now() + timerSeconds * 1000;
+    timerState = 'running';
+    updateTimerDisplay();
+    timerInterval = setInterval(timerTick, 1000);
+    saveTimerState();
+    scheduleAlarmAtEnd(); // Pre-schedule beeps so they play even in background
+  } else if (timerState === 'running') {
+    clearInterval(timerInterval); timerInterval = null;
+    cancelScheduledAlarm();
+    timerState = 'paused';
+    updateTimerDisplay();
+    saveTimerState();
+  } else if (timerState === 'paused') {
+    timerEndEpoch = Date.now() + timerSeconds * 1000;
+    timerState = 'running';
+    updateTimerDisplay();
+    timerInterval = setInterval(timerTick, 1000);
+    saveTimerState();
+    scheduleAlarmAtEnd();
+  }
+});
+
+document.getElementById('timer-reset-btn').addEventListener('click', () => {
+  clearInterval(timerInterval); timerInterval = null;
+  cancelScheduledAlarm();
+  timerSeconds = 0; timerState = 'idle';
+  document.getElementById('timer-minutes-input').value = '';
+  updateTimerDisplay();
+  localStorage.removeItem(TIMER_LS_KEY);
+});
+
+document.querySelectorAll('.timer-preset').forEach(btn => {
+  btn.addEventListener('click', () => {
+    unlockAudio();
+    const mins = parseInt(btn.dataset.minutes);
+    document.getElementById('timer-minutes-input').value = mins;
+    const now = new Date();
+    const midnight = new Date(now); midnight.setHours(24, 0, 0, 0);
+    const maxSecs = Math.floor((midnight - now) / 1000);
+    clearInterval(timerInterval); timerInterval = null;
+    cancelScheduledAlarm();
+    timerSeconds = Math.min(mins * 60, maxSecs);
+    timerEndEpoch = Date.now() + timerSeconds * 1000;
+    timerState = 'running';
+    updateTimerDisplay();
+    timerInterval = setInterval(timerTick, 1000);
+    saveTimerState();
+    scheduleAlarmAtEnd();
+  });
+});
+
+// Restore timer on page load (now deferred to init function after auth)
+// restoreTimerState();
+
+// ===== SETTINGS LOGOUT =====
+document.getElementById('settings-logout-btn').addEventListener('click', logout);
 
 document.getElementById('logout-btn').addEventListener('click', logout);
 function logout() {
   token = ''; currentUserId = '';
   localStorage.removeItem('tm_token'); localStorage.removeItem('tm_userId');
   document.getElementById('dashboard').classList.add('hidden');
+  
+  const settingsModal = document.getElementById('settings-modal');
+  if (settingsModal) settingsModal.classList.add('hidden');
+  
+  // Clear sensitive form fields
+  const fieldsToClear = [
+    'delete-account-password', 'login-password', 'login-pin',
+    'register-password', 'register-confirm', 'register-pin',
+    'current-password', 'new-password', 'confirm-new-password'
+  ];
+  fieldsToClear.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  const pinContainer = document.getElementById('login-pin-container');
+  if (pinContainer) pinContainer.classList.add('hidden');
+
   document.getElementById('auth-screen').classList.remove('hidden');
 }
 
@@ -936,7 +1479,12 @@ function logout() {
         const nsRes = await fetch('/api/settings/north-star', { headers: headers() });
         if (nsRes.ok) { const nsData = await nsRes.json(); northStarGoal = nsData.northStarGoal || ''; }
         showDashboard();
+        // Now that config is loaded, restore timer specifically asking the server
+        restoreTimerState();
       } else { logout(); }
     } catch { logout(); }
+  } else {
+    // No token, but could have local offline timer
+    restoreTimerState();
   }
 })();

@@ -1,7 +1,7 @@
 # ─── Stage 1: Install dependencies ───
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 
 # ─── Stage 2: Production image ───
@@ -18,16 +18,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY server.js ./
 COPY public ./public
 
-# Create a directory for persistent data
-RUN mkdir -p /data && chown node:node /data
-
 # Default environment variables
 ENV NODE_ENV=production \
-    PORT=3000 \
-    DATA_DIR=/data
-
-# Data volume — mount this to persist tasks across container restarts
-VOLUME /data
+    PORT=3000
 
 # Run as non-root user
 USER node
