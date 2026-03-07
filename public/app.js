@@ -15,6 +15,7 @@ let currentNotes = [];
 let activeNoteId = null;
 let activeIdeaId = null;
 let currentView = 'dashboard'; // 'dashboard' | 'ideas' | 'notes'
+let currentPrefs = {};
 const MAX_TASKS = 21;
 const DEFAULT_TASKS = 3;
 
@@ -50,6 +51,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (!res.ok) { 
+      // If error is No user found, please register (or similar 401 specific msg)
       errEl.textContent = data.error; 
       errEl.classList.remove('hidden'); 
       if (res.status === 429) {
@@ -86,7 +88,90 @@ function loginSuccess(data) {
 }
 
 function applyPreferences(prefs) {
+  currentPrefs = prefs || {};
   document.documentElement.classList.toggle('dark', !!prefs.darkMode);
+  const isDark = document.documentElement.classList.contains('dark');
+  const accentTheme = isDark ? (prefs.accentDark || 'purple') : (prefs.accentLight || 'purple');
+  document.documentElement.setAttribute('data-theme', accentTheme);
+  
+  const customHex = isDark ? prefs.customHexDark : prefs.customHexLight;
+  if (accentTheme === 'custom' && customHex) {
+    if (typeof generateCustomStyle === 'function') generateCustomStyle(customHex);
+    const trigger = document.getElementById('custom-picker-trigger');
+    const preview = document.getElementById('custom-accent-preview');
+    if (trigger) trigger.dataset.currentHex = customHex;
+    if (preview) preview.style.background = customHex;
+  }
+
+  // Apply accent icons preference
+  if (prefs.accentIcons) {
+    document.body.classList.add('accent-icons');
+  }
+
+  // Apply gradient settings
+  if (prefs.auraSolid) document.body.classList.add('aura-solid');
+  else document.body.classList.remove('aura-solid');
+
+  if (prefs.auraOp !== undefined) {
+    document.documentElement.style.setProperty('--aura-op', prefs.auraOp);
+  }
+  if (prefs.bgDark !== undefined) {
+    document.documentElement.style.setProperty('--bg-color-dark', `hsl(var(--ac-h), var(--ac-s), ${prefs.bgDark}%)`);
+  }
+  if (prefs.bgLight !== undefined) {
+    document.documentElement.style.setProperty('--bg-color-light', `hsl(var(--ac-h), var(--ac-s), ${prefs.bgLight}%)`);
+  }
+  if (prefs.auraSat !== undefined) {
+    document.documentElement.style.setProperty('--aura-sat', prefs.auraSat + '%');
+  }
+  if (prefs.auraBlur !== undefined) {
+    document.documentElement.style.setProperty('--aura-blur', prefs.auraBlur + 'px');
+  }
+}
+
+// ===== CUSTOM COLOR HELPER (GLOBAL) =====
+function hexToRgb(hex) {
+  if (hex.startsWith('#')) hex = hex.slice(1);
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  return [r, g, b];
+}
+
+function interpolateColor(color1, color2, factor) {
+  const r = Math.round(color1[0] + factor * (color2[0] - color1[0]));
+  const g = Math.round(color1[1] + factor * (color2[1] - color1[1]));
+  const b = Math.round(color1[2] + factor * (color2[2] - color1[2]));
+  return `${r} ${g} ${b}`;
+}
+
+function generateCustomStyle(baseHex) {
+  const baseRgb = hexToRgb(baseHex);
+  const white = [255, 255, 255];
+  const black = [0, 0, 0];
+  
+  const theme = `
+    [data-theme="custom"] {
+      --ac-50: ${interpolateColor(white, baseRgb, 0.1)};
+      --ac-100: ${interpolateColor(white, baseRgb, 0.2)};
+      --ac-200: ${interpolateColor(white, baseRgb, 0.4)};
+      --ac-300: ${interpolateColor(white, baseRgb, 0.6)};
+      --ac-400: ${interpolateColor(white, baseRgb, 0.8)};
+      --ac-500: ${baseRgb.join(' ')};
+      --ac-600: ${interpolateColor(baseRgb, black, 0.15)};
+      --ac-700: ${interpolateColor(baseRgb, black, 0.3)};
+      --ac-800: ${interpolateColor(baseRgb, black, 0.45)};
+      --ac-900: ${interpolateColor(baseRgb, black, 0.6)};
+      --ac-950: ${interpolateColor(baseRgb, black, 0.8)};
+    }
+  `;
+  let styleTag = document.getElementById('custom-theme-style');
+  if (!styleTag) {
+    styleTag = document.createElement('style');
+    styleTag.id = 'custom-theme-style';
+    document.head.appendChild(styleTag);
+  }
+  styleTag.innerHTML = theme;
 }
 
 function showDashboard() {
@@ -120,10 +205,424 @@ function switchView(view) {
   }
 }
 
+function _setupAccentColorSettings() {
+  const accentButtons = document.querySelectorAll('#accent-color-selector button');
+  if (!accentButtons.length) return;
+
+  function setAccentColor(color) {
+    document.documentElement.setAttribute('data-theme', color);
+    const isDark = document.documentElement.classList.contains('dark');
+    
+    if (isDark) currentPrefs.accentDark = color;
+    else currentPrefs.accentLight = color;
+
+    // Send to backend
+    fetch('/api/settings/preferences', {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ [isDark ? 'accentDark' : 'accentLight']: color })
+    }).catch(e => console.error('Failed to save accent color', e));
+  }
+
+  accentButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const theme = btn.dataset.theme;
+      setAccentColor(theme);
+    });
+  });
+
+  // Custom Color Picker Logic — in-app HSL modal
+  const customTrigger = document.getElementById('custom-picker-trigger');
+  const customPreview = document.getElementById('custom-accent-preview');
+  const customCheck = document.getElementById('custom-accent-check');
+
+  function hslaToHex(h, s, l, a) {
+    s /= 100; l /= 100; a /= 100;
+    const a1 = s * Math.min(l, 1 - l);
+    const f = n => { const k = (n + h / 30) % 12; return l - a1 * Math.max(Math.min(k - 3, 9 - k, 1), -1); };
+    return '#' + [f(0), f(8), f(4), a].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+  }
+
+  function openColorPickerModal() {
+    // Remove existing modal if any
+    const existing = document.getElementById('custom-color-modal');
+    if (existing) existing.remove();
+
+    let hue = 220, sat = 70, light = 50, alpha = 100;
+    const isDark = document.documentElement.classList.contains('dark');
+    const currentHex = customTrigger?.dataset.currentHex || (isDark ? currentPrefs.customHexDark : currentPrefs.customHexLight);
+    // Simple: start from stored values or defaults
+
+    const modal = document.createElement('div');
+    modal.id = 'custom-color-modal';
+    modal.className = 'color-picker-modal';
+    modal.innerHTML = `
+      <div class="color-picker-card">
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="text-base font-bold text-gray-900 dark:text-white">Choose Custom Color</h3>
+          <button id="color-picker-close" class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div id="color-preview-box" class="w-full h-20 rounded-2xl mb-5 transition-colors shadow-inner" style="background: ${hslaToHex(hue, sat, light, alpha)}"></div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Hue</label>
+            <input type="range" id="cp-hue" min="0" max="360" value="${hue}" class="color-picker-hue">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Saturation</label>
+            <input type="range" id="cp-sat" min="0" max="100" value="${sat}" class="color-picker-sat" style="background: linear-gradient(to right, hsla(${hue},0%,${light}%,${alpha/100}), hsla(${hue},100%,${light}%,${alpha/100}))">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Lightness</label>
+            <input type="range" id="cp-light" min="10" max="90" value="${light}" class="color-picker-light" style="background: linear-gradient(to right, hsla(${hue},${sat}%,10%,${alpha/100}), hsla(${hue},${sat}%,50%,${alpha/100}), hsla(${hue},${sat}%,90%,${alpha/100}))">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Alpha</label>
+            <input type="range" id="cp-alpha" min="0" max="100" value="${alpha}" class="color-picker-alpha" style="background: linear-gradient(to right, transparent, hsl(${hue},${sat}%,${light}%))">
+          </div>
+        </div>
+        <p id="cp-hex-label" class="text-center text-xs font-mono text-gray-400 mt-3">${hslaToHex(hue, sat, light, alpha)}</p>
+        <div class="flex gap-3 mt-5">
+          <button id="color-picker-cancel" class="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-semibold text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition">Cancel</button>
+          <button id="color-picker-apply" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-accent-500 to-accent-600 text-white font-bold text-sm hover:shadow-lg hover:shadow-accent-500/30 active:scale-[0.97] transition-all">Apply</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const preview = document.getElementById('color-preview-box');
+    const hexLabel = document.getElementById('cp-hex-label');
+    const hueSlider = document.getElementById('cp-hue');
+    const satSlider = document.getElementById('cp-sat');
+    const lightSlider = document.getElementById('cp-light');
+    const alphaSlider = document.getElementById('cp-alpha');
+
+    function updatePreview() {
+      hue = parseInt(hueSlider.value);
+      sat = parseInt(satSlider.value);
+      light = parseInt(lightSlider.value);
+      alpha = parseInt(alphaSlider.value);
+      const hex = hslaToHex(hue, sat, light, alpha);
+      preview.style.background = hex;
+      hexLabel.textContent = hex;
+      satSlider.style.background = `linear-gradient(to right, hsla(${hue},0%,${light}%,${alpha/100}), hsla(${hue},100%,${light}%,${alpha/100}))`;
+      lightSlider.style.background = `linear-gradient(to right, hsla(${hue},${sat}%,10%,${alpha/100}), hsla(${hue},${sat}%,50%,${alpha/100}), hsla(${hue},${sat}%,90%,${alpha/100}))`;
+      alphaSlider.style.background = `linear-gradient(to right, transparent, hsl(${hue},${sat}%,${light}%))`;
+    }
+
+    hueSlider.addEventListener('input', updatePreview);
+    satSlider.addEventListener('input', updatePreview);
+    lightSlider.addEventListener('input', updatePreview);
+    alphaSlider.addEventListener('input', updatePreview);
+
+    document.getElementById('color-picker-cancel').addEventListener('click', () => modal.remove());
+    document.getElementById('color-picker-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+    document.getElementById('color-picker-apply').addEventListener('click', () => {
+      const hex = hslaToHex(hue, sat, light, alpha);
+      customTrigger.dataset.currentHex = hex;
+      customPreview.style.background = hex;
+      generateCustomStyle(hex);
+
+      document.documentElement.setAttribute('data-theme', 'custom');
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        currentPrefs.accentDark = 'custom';
+        currentPrefs.customHexDark = hex;
+      } else {
+        currentPrefs.accentLight = 'custom';
+        currentPrefs.customHexLight = hex;
+      }
+
+      fetch('/api/settings/preferences', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ 
+          [isDark ? 'accentDark' : 'accentLight']: 'custom',
+          [isDark ? 'customHexDark' : 'customHexLight']: hex
+        })
+      }).catch(e => console.error('Failed to save custom hex', e));
+
+      modal.remove();
+    });
+  }
+
+  if (customTrigger) {
+    customTrigger.addEventListener('click', openColorPickerModal);
+
+    // Observe theme to toggle checkmark
+    const observer = new MutationObserver(() => {
+      const isCustom = document.documentElement.getAttribute('data-theme') === 'custom';
+      if (customCheck) customCheck.classList.toggle('hidden', !isCustom);
+      const icon = document.getElementById('custom-accent-icon');
+      if (icon) icon.classList.toggle('hidden', isCustom);
+      if (isCustom) {
+        customTrigger.classList.add('scale-110');
+        customTrigger.classList.remove('border-transparent');
+        customTrigger.classList.add('border-accent-400');
+      } else {
+        customTrigger.classList.remove('scale-110', 'border-accent-400');
+        customTrigger.classList.add('border-transparent');
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+
+  // ===== ICON ACCENT TOGGLE =====
+  const iconToggle = document.getElementById('settings-icon-toggle');
+  if (iconToggle) {
+    // Load preference
+    const loadIconPref = () => {
+      fetch('/api/settings/preferences', { headers: headers() })
+        .then(r => r.json())
+        .then(data => {
+          const enabled = !!(data.preferences && data.preferences.accentIcons);
+          document.body.classList.toggle('accent-icons', enabled);
+          iconToggle.classList.toggle('bg-accent-600', enabled);
+          iconToggle.classList.toggle('border-accent-500', enabled);
+          iconToggle.classList.toggle('bg-gray-300', !enabled);
+          iconToggle.classList.toggle('border-gray-400', !enabled);
+          const knob = iconToggle.querySelector('.settings-toggle-knob');
+          if (knob) knob.style.transform = enabled ? 'translateX(1.5rem)' : 'translateX(0)';
+        }).catch(() => {});
+    };
+    loadIconPref();
+
+    iconToggle.addEventListener('click', () => {
+      const isOn = document.body.classList.toggle('accent-icons');
+      iconToggle.classList.toggle('bg-accent-600', isOn);
+      iconToggle.classList.toggle('border-accent-500', isOn);
+      iconToggle.classList.toggle('bg-gray-300', !isOn);
+      iconToggle.classList.toggle('border-gray-400', !isOn);
+      const knob = iconToggle.querySelector('.settings-toggle-knob');
+      if (knob) knob.style.transform = isOn ? 'translateX(1.5rem)' : 'translateX(0)';
+      fetch('/api/settings/preferences', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ accentIcons: isOn })
+      }).catch(e => console.error('Failed to save icon pref', e));
+    });
+  }
+}
+
+// ===== DARK MODE GRADIENT MODAL =====
+function _setupGradientSettings() {
+  const gradModal = document.getElementById('gradient-modal');
+  const gradBtn = document.getElementById('gradient-settings-btn');
+  const gradCloseBtn = document.getElementById('gradient-picker-close');
+  const gradCancel = document.getElementById('gradient-cancel');
+  const gradApply = document.getElementById('gradient-apply');
+  const gradOpSlider = document.getElementById('aura-op');
+  const gradBgSlider = document.getElementById('aura-bright');
+  const gradSatSlider = document.getElementById('aura-sat');
+  const gradBlurSlider = document.getElementById('aura-blur');
+  const gradOpVal = document.getElementById('aura-op-val');
+  const gradBgVal = document.getElementById('aura-bright-val');
+  const gradSatVal = document.getElementById('aura-sat-val');
+  const gradBlurVal = document.getElementById('aura-blur-val');
+
+  const styleToggle = document.getElementById('aura-style-toggle');
+
+  if (gradBtn && gradModal) {
+    let originalOp, originalBg, originalSat, originalBlur, originalSolid;
+    let tempSolid = false;
+    let isDark = false;
+
+    const openGradModal = () => {
+      isDark = document.documentElement.classList.contains('dark');
+      
+      // Sync sliders with prefs
+      originalOp = currentPrefs.auraOp !== undefined ? currentPrefs.auraOp : 0.15;
+      originalSat = currentPrefs.auraSat !== undefined ? currentPrefs.auraSat : 100;
+      originalBlur = currentPrefs.auraBlur !== undefined ? currentPrefs.auraBlur : 60;
+      originalSolid = !!currentPrefs.auraSolid;
+      tempSolid = originalSolid;
+      
+      if (isDark) {
+        gradBgSlider.min = 0;
+        gradBgSlider.max = 20;
+        originalBg = currentPrefs.bgDark !== undefined ? currentPrefs.bgDark : 2;
+      } else {
+        gradBgSlider.min = 80;
+        gradBgSlider.max = 100;
+        originalBg = currentPrefs.bgLight !== undefined ? currentPrefs.bgLight : 98;
+      }
+      
+      gradOpSlider.value = originalOp * 100;
+      gradBgSlider.value = originalBg;
+      gradSatSlider.value = originalSat;
+      gradBlurSlider.value = originalBlur;
+      
+      gradOpVal.textContent = Math.round(originalOp * 100) + '%';
+      gradBgVal.textContent = originalBg + '%';
+      gradSatVal.textContent = originalSat + '%';
+      gradBlurVal.textContent = originalBlur + 'px';
+      
+      if (styleToggle) {
+        const knob = styleToggle.querySelector('.settings-toggle-knob');
+        if (tempSolid) {
+          styleToggle.classList.replace('bg-gray-300', 'bg-accent-600');
+          styleToggle.classList.replace('border-gray-400', 'border-accent-500');
+          if (knob) knob.style.transform = 'translateX(1.25rem)';
+        } else {
+          styleToggle.classList.replace('bg-accent-600', 'bg-gray-300');
+          styleToggle.classList.replace('border-accent-500', 'border-gray-400');
+          if (knob) knob.style.transform = 'translateX(0)';
+        }
+      }
+
+      gradModal.classList.remove('hidden');
+      gradModal.classList.add('flex');
+    };
+
+    const closeGradModal = () => {
+      gradModal.classList.add('hidden');
+      gradModal.classList.remove('flex');
+      // Revert temporary live-preview adjustments
+      if (currentPrefs.auraOp !== undefined) {
+        document.documentElement.style.setProperty('--aura-op', currentPrefs.auraOp);
+      } else {
+        document.documentElement.style.removeProperty('--aura-op');
+      }
+      if (currentPrefs.bgDark !== undefined) {
+        document.documentElement.style.setProperty('--bg-color-dark', `hsl(var(--ac-h), var(--ac-s), ${currentPrefs.bgDark}%)`);
+      } else {
+        document.documentElement.style.removeProperty('--bg-color-dark');
+      }
+      if (currentPrefs.bgLight !== undefined) {
+        document.documentElement.style.setProperty('--bg-color-light', `hsl(var(--ac-h), var(--ac-s), ${currentPrefs.bgLight}%)`);
+      } else {
+        document.documentElement.style.removeProperty('--bg-color-light');
+      }
+      if (currentPrefs.auraSat !== undefined) {
+        document.documentElement.style.setProperty('--aura-sat', currentPrefs.auraSat + '%');
+      } else {
+        document.documentElement.style.removeProperty('--aura-sat');
+      }
+      if (currentPrefs.auraBlur !== undefined) {
+        document.documentElement.style.setProperty('--aura-blur', currentPrefs.auraBlur + 'px');
+      } else {
+        document.documentElement.style.removeProperty('--aura-blur');
+      }
+      
+      if (originalSolid) document.body.classList.add('aura-solid');
+      else document.body.classList.remove('aura-solid');
+    };
+
+    gradBtn.addEventListener('click', openGradModal);
+    gradCloseBtn.addEventListener('click', closeGradModal);
+    gradCancel.addEventListener('click', closeGradModal);
+    gradModal.addEventListener('click', (e) => {
+      if (e.target === gradModal) closeGradModal();
+    });
+
+    // Live preview
+    if (styleToggle) {
+      styleToggle.addEventListener('click', () => {
+        tempSolid = !tempSolid;
+        document.body.classList.toggle('aura-solid', tempSolid);
+        const knob = styleToggle.querySelector('.settings-toggle-knob');
+        if (tempSolid) {
+          styleToggle.classList.replace('bg-gray-300', 'bg-accent-600');
+          styleToggle.classList.replace('border-gray-400', 'border-accent-500');
+          if (knob) knob.style.transform = 'translateX(1.25rem)';
+        } else {
+          styleToggle.classList.replace('bg-accent-600', 'bg-gray-300');
+          styleToggle.classList.replace('border-accent-500', 'border-gray-400');
+          if (knob) knob.style.transform = 'translateX(0)';
+        }
+      });
+    }
+
+    gradOpSlider.addEventListener('input', (e) => {
+      const val = e.target.value;
+      gradOpVal.textContent = val + '%';
+      document.documentElement.style.setProperty('--aura-op', val / 100);
+    });
+
+    gradBgSlider.addEventListener('input', (e) => {
+      const val = e.target.value;
+      gradBgVal.textContent = val + '%';
+      if (isDark) {
+        document.documentElement.style.setProperty('--bg-color-dark', `hsl(var(--ac-h), var(--ac-s), ${val}%)`);
+      } else {
+        document.documentElement.style.setProperty('--bg-color-light', `hsl(var(--ac-h), var(--ac-s), ${val}%)`);
+      }
+    });
+
+    gradSatSlider.addEventListener('input', (e) => {
+      const val = e.target.value;
+      gradSatVal.textContent = val + '%';
+      document.documentElement.style.setProperty('--aura-sat', val + '%');
+    });
+
+    gradBlurSlider.addEventListener('input', (e) => {
+      const val = e.target.value;
+      gradBlurVal.textContent = val + 'px';
+      document.documentElement.style.setProperty('--aura-blur', val + 'px');
+    });
+
+    gradApply.addEventListener('click', async () => {
+      const newOp = parseFloat(gradOpSlider.value) / 100;
+      const newBg = parseFloat(gradBgSlider.value);
+      const newSat = parseInt(gradSatSlider.value, 10);
+      const newBlur = parseInt(gradBlurSlider.value, 10);
+      
+      currentPrefs.auraOp = newOp;
+      if (isDark) {
+        currentPrefs.bgDark = newBg;
+      } else {
+        currentPrefs.bgLight = newBg;
+      }
+      currentPrefs.auraSat = newSat;
+      currentPrefs.auraBlur = newBlur;
+      currentPrefs.auraSolid = tempSolid;
+      
+      try {
+        await fetch('/api/settings/preferences', { 
+          method: 'POST', 
+          headers: headers(), 
+          body: JSON.stringify({ 
+            auraOp: newOp, 
+            bgDark: currentPrefs.bgDark,
+            bgLight: currentPrefs.bgLight,
+            auraSat: newSat,
+            auraBlur: newBlur,
+            auraSolid: tempSolid
+          }) 
+        });
+        document.documentElement.style.setProperty('--aura-op', newOp);
+        if (isDark) document.documentElement.style.setProperty('--bg-color-dark', `hsl(var(--ac-h), var(--ac-s), ${newBg}%)`);
+        else document.documentElement.style.setProperty('--bg-color-light', `hsl(var(--ac-h), var(--ac-s), ${newBg}%)`);
+        document.documentElement.style.setProperty('--aura-sat', newSat + '%');
+        document.documentElement.style.setProperty('--aura-blur', newBlur + 'px');
+        
+        if (tempSolid) document.body.classList.add('aura-solid');
+        else document.body.classList.remove('aura-solid');
+        
+        gradModal.classList.add('hidden');
+        gradModal.classList.remove('flex');
+      } catch (err) {
+        console.error('Failed to save gradient settings', err);
+        alert('Failed to save settings.');
+      }
+    });
+  }
+}
+_setupGradientSettings();
+
 // Bind navigation tabs
 document.querySelectorAll('.app-nav-tab').forEach(tab => {
   tab.addEventListener('click', () => switchView(tab.dataset.view));
 });
+
+// Setup accent color immediately
+_setupAccentColorSettings();
 
 // ===== NORTH STAR =====
 function updateNorthStarDisplay() {
@@ -603,7 +1102,7 @@ function renderIdeas() {
   document.getElementById('ideas-count').textContent = `${currentIdeas.length} ideas`;
 
   const addCard = document.createElement('div');
-  addCard.className = 'idea-card card hover:border-violet-300 dark:hover:border-violet-700 transition cursor-pointer border-dashed border-2 bg-transparent';
+  addCard.className = 'idea-card idea-add-card card transition cursor-pointer';
   addCard.innerHTML = `
     <div class="idea-title text-gray-400 italic font-normal">Type new idea here...</div>
     <div class="idea-body opacity-50 text-gray-400">Click to expand and save</div>
@@ -618,7 +1117,7 @@ function renderIdeas() {
   // Render existing ideas (newest first)
   [...currentIdeas].reverse().forEach(idea => {
     const card = document.createElement('div');
-    card.className = 'idea-card card hover:border-violet-300 dark:hover:border-violet-700 transition';
+    card.className = 'idea-card card transition';
     card.addEventListener('click', (e) => {
       if (e.target.closest('.idea-delete-btn')) return;
       openIdeaModal(idea.id);
@@ -774,7 +1273,7 @@ function renderIdeaTodos() {
     
     // Checkbox mapping completed state
     const checkBtn = document.createElement('button');
-    checkBtn.className = `w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center border transition-colors ${todo.completed ? 'bg-pink-500 border-pink-500' : 'border-gray-300 dark:border-gray-600 hover:border-pink-500'}`;
+    checkBtn.className = `w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center border transition-colors ${todo.completed ? 'bg-accent-500 border-accent-500' : 'border-gray-300 dark:border-gray-600 hover:border-accent-500'}`;
     checkBtn.innerHTML = todo.completed ? `<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>` : '';
     
     // Title mapping
@@ -860,7 +1359,7 @@ function startEditIdeaTodo(todo, titleSpan) {
   
   const input = document.createElement('input');
   input.type = 'text';
-  input.className = 'flex-1 text-sm font-medium px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 border-none outline-none focus:ring-1 focus:ring-pink-500 -ml-2';
+  input.className = 'flex-1 text-sm font-medium px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 border-none outline-none focus:ring-1 focus:ring-accent-500 -ml-2';
   input.value = todo.title;
   
   titleSpan.replaceWith(input);
@@ -898,6 +1397,15 @@ document.getElementById('settings-modal').addEventListener('click', (e) => { if 
 document.getElementById('settings-theme-toggle').addEventListener('click', async () => {
   const isDark = !document.documentElement.classList.contains('dark');
   document.documentElement.classList.toggle('dark', isDark);
+
+  // Sync Accent Colors immediately for the new mode
+  const accentTheme = isDark ? (currentPrefs.accentDark || 'purple') : (currentPrefs.accentLight || 'purple');
+  document.documentElement.setAttribute('data-theme', accentTheme);
+  const customHex = isDark ? currentPrefs.customHexDark : currentPrefs.customHexLight;
+  if (accentTheme === 'custom' && customHex && typeof generateCustomStyle === 'function') {
+    generateCustomStyle(customHex);
+  }
+
   try { await fetch('/api/settings/preferences', { method: 'POST', headers: headers(), body: JSON.stringify({ darkMode: isDark }) }); } catch {}
 });
 
@@ -1028,11 +1536,11 @@ function renderNotesList() {
   [...currentNotes].reverse().forEach(note => {
     const item = document.createElement('div');
     const isActive = note.id === activeNoteId;
-    item.className = `p-3 rounded-xl cursor-pointer transition flex flex-col gap-1 ${isActive ? 'bg-violet-100 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'}`;
+    item.className = `p-3 rounded-xl cursor-pointer transition flex flex-col gap-1 ${isActive ? 'bg-accent-100 dark:bg-accent-900/40 border border-accent-200 dark:border-accent-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'}`;
     
     const dateStr = note.updatedAt ? new Date(note.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
     item.innerHTML = `
-      <div class="font-semibold text-sm truncate ${isActive ? 'text-violet-700 dark:text-violet-300' : ''}">${escHtml(note.title)}</div>
+      <div class="font-semibold text-sm truncate ${isActive ? 'text-accent-700 dark:text-accent-300' : ''}">${escHtml(note.title)}</div>
       <div class="text-xs text-gray-500 dark:text-gray-400 flex justify-between">
         <span class="truncate pr-4">${note.content ? escHtml(note.content).substring(0, 30) + '...' : 'Empty...'}</span>
         <span class="shrink-0 flex items-center">${dateStr}</span>
@@ -1184,15 +1692,20 @@ window.addEventListener('click', unlockAudio, { once: true });
 
 // Persist timer across tabs/refresh via localStorage
 const TIMER_LS_KEY = 'tm_timer';
+let lastSavedTimerStr = '';
 
 function saveTimerState() {
   const stateObj = { endEpoch: timerEndEpoch, state: timerState };
   if (timerState === 'paused') stateObj.secondsLeft = timerSeconds;
   
+  const stateStr = JSON.stringify(stateObj);
+  if (stateStr === lastSavedTimerStr && timerState === 'running') return; // Prevent API spam every tick
+  lastSavedTimerStr = stateStr;
+
   if (timerState === 'idle') {
     localStorage.removeItem(TIMER_LS_KEY);
   } else {
-    localStorage.setItem(TIMER_LS_KEY, JSON.stringify(stateObj));
+    localStorage.setItem(TIMER_LS_KEY, stateStr);
   }
   
   // Sync with server if logged in
@@ -1233,8 +1746,9 @@ async function restoreTimerState() {
         timerSeconds = remaining;
         timerState = 'running';
         updateTimerDisplay();
+        if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(timerTick, 1000);
-        alarmNeedsSchedule = true;
+        scheduleAlarmAtEnd();
       } else {
         localStorage.removeItem(TIMER_LS_KEY);
         timerSeconds = 0; timerState = 'idle';
@@ -1257,8 +1771,6 @@ function updateTimerDisplay() {
   display.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   
   display.classList.remove('timer-running','timer-paused','timer-done');
-  if (timerState === 'running') display.classList.add('timer-running');
-  else if (timerState === 'paused') display.classList.add('timer-paused');
   
   const btn = document.getElementById('timer-start-btn');
   if (timerState === 'idle') btn.textContent = 'Start';
@@ -1323,7 +1835,7 @@ function triggerTimerAlarm() {
 
   const banner = document.createElement('div');
   banner.id = 'timer-alarm-banner';
-  banner.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[300] bg-gradient-to-r from-pink-600 to-rose-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 max-w-sm';
+  banner.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[300] bg-gradient-to-r from-accent-600 to-accent-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 max-w-sm';
   banner.innerHTML = `
     <span class="text-2xl">⏰</span>
     <div class="flex-1">
@@ -1414,7 +1926,7 @@ document.getElementById('timer-reset-btn').addEventListener('click', () => {
   timerSeconds = 0; timerState = 'idle';
   document.getElementById('timer-minutes-input').value = '';
   updateTimerDisplay();
-  localStorage.removeItem(TIMER_LS_KEY);
+  saveTimerState(); // Clears localStorage AND syncs idle state to server
 });
 
 document.querySelectorAll('.timer-preset').forEach(btn => {
@@ -1447,26 +1959,7 @@ document.getElementById('logout-btn').addEventListener('click', logout);
 function logout() {
   token = ''; currentUserId = '';
   localStorage.removeItem('tm_token'); localStorage.removeItem('tm_userId');
-  document.getElementById('dashboard').classList.add('hidden');
-  
-  const settingsModal = document.getElementById('settings-modal');
-  if (settingsModal) settingsModal.classList.add('hidden');
-  
-  // Clear sensitive form fields
-  const fieldsToClear = [
-    'delete-account-password', 'login-password', 'login-pin',
-    'register-password', 'register-confirm', 'register-pin',
-    'current-password', 'new-password', 'confirm-new-password'
-  ];
-  fieldsToClear.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-
-  const pinContainer = document.getElementById('login-pin-container');
-  if (pinContainer) pinContainer.classList.add('hidden');
-
-  document.getElementById('auth-screen').classList.remove('hidden');
+  window.location.reload(); // Reload to clear all states, intervals, and bypass CSS override
 }
 
 // ===== INIT =====

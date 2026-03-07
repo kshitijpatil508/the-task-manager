@@ -32,7 +32,7 @@ mongoose.connect(MONGODB_URI)
 const UserSchema = new mongoose.Schema({
   userId: { type: String, required: true, unique: true },
   passwordHash: { type: String, required: true },
-  preferences: { darkMode: { type: Boolean, default: true } },
+  preferences: { type: mongoose.Schema.Types.Mixed, default: { darkMode: false } },
   northStarGoal: { type: String, default: '' },
   recoveryPin: { type: String, default: null },
   disabled: { type: Boolean, default: false },
@@ -309,7 +309,7 @@ app.post('/api/register', registerLimiter, async (req, res) => {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     const newUser = new User({
       userId: uid, passwordHash, recoveryPin: hashedPin,
-      preferences: { darkMode: true }, northStarGoal: '', migrated: true
+      preferences: { darkMode: false }, northStarGoal: '', migrated: true
     });
     await newUser.save();
 
@@ -325,7 +325,8 @@ app.post('/api/login', authLimiter, async (req, res) => {
     const uid = userId.trim().toLowerCase();
 
     const user = await User.findOne({ userId: uid });
-    if (!user || !user.passwordHash) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) return res.status(401).json({ error: 'No user found, please register.' });
+    if (!user.passwordHash) return res.status(401).json({ error: 'Invalid credentials' });
     if (user.disabled) return res.status(403).json({ error: 'Account is disabled. Contact admin.' });
 
     const match = await bcrypt.compare(password, user.passwordHash);

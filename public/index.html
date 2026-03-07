@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="bg-white dark:bg-black">
 
 <head>
   <meta charset="UTF-8">
@@ -15,13 +15,32 @@
   <script>
     tailwind.config = {
       darkMode: 'class',
-      theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
+      theme: { 
+        extend: { 
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+           colors: {
+            accent: {
+              50: 'rgb(var(--ac-50) / <alpha-value>)',
+              100: 'rgb(var(--ac-100) / <alpha-value>)',
+              200: 'rgb(var(--ac-200) / <alpha-value>)',
+              300: 'rgb(var(--ac-300) / <alpha-value>)',
+              400: 'rgb(var(--ac-400) / <alpha-value>)',
+              500: 'rgb(var(--ac-500) / <alpha-value>)',
+              600: 'rgb(var(--ac-600) / <alpha-value>)',
+              700: 'rgb(var(--ac-700) / <alpha-value>)',
+              800: 'rgb(var(--ac-800) / <alpha-value>)',
+              900: 'rgb(var(--ac-900) / <alpha-value>)',
+              950: 'rgb(var(--ac-950) / <alpha-value>)',
+            }
+          }
+        } 
+      }
     }
   </script>
 </head>
 
 <body
-  class="font-sans antialiased bg-slate-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen">
+  class="font-sans antialiased text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen">
   <!-- Pre-render: hide auth if user is already logged in to prevent flash -->
   <script>
     if (localStorage.getItem('tm_token')) {
@@ -30,7 +49,7 @@
   </script>
 
   <!-- ============ AUTH SCREEN ============ -->
-  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-950">
     <div class="auth-card w-full max-w-md p-8 rounded-3xl">
       <div class="text-center mb-8">
         <div
@@ -77,22 +96,22 @@
         <div><label
             class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">User
             ID</label><input id="register-userId" type="text" required placeholder="Choose a user ID (2-30 chars)"
-            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition text-sm">
         </div>
         <div><label
             class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Password</label><input
             id="register-password" type="password" required placeholder="Choose a password (8+ chars)"
-            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition text-sm">
         </div>
         <div><label
             class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Confirm
             Password</label><input id="register-confirm" type="password" required placeholder="Confirm password"
-            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition text-sm">
         </div>
         <div><label
             class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Recovery
             PIN (Optional)</label><input id="register-pin" type="text" placeholder="Set a PIN for rate limit bypass"
-            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition text-sm">
         </div>
         <div id="register-error" class="text-red-500 text-sm text-center hidden"></div>
         <button type="submit"
@@ -108,7 +127,7 @@
       <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div
-            class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-md shadow-violet-500/20">
+            class="w-9 h-9 rounded-xl bg-gradient-to-br from-accent-500 to-accent-600 flex items-center justify-center shadow-md shadow-violet-500/20">
             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -145,7 +164,7 @@
             </button>
           </div>
           <button id="user-badge"
-            class="text-sm font-bold px-3 py-1.5 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-800 transition cursor-pointer"
+            class="text-sm font-bold px-4 py-2 rounded-xl bg-gradient-to-r from-accent-500 to-accent-600 dark:from-accent-500 dark:to-accent-400 text-white shadow-md hover:shadow-lg hover:shadow-accent-500/30 active:scale-[0.97] transition-all cursor-pointer"
             aria-label="Settings"></button>
           <button id="logout-btn" class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition"
             aria-label="Logout">
@@ -232,29 +251,29 @@
           <!-- INLINE TIMER -->
           <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
             <div id="timer-display"
-              class="font-black tabular-nums tracking-tight text-gray-400 dark:text-gray-600 transition-colors select-none">
+              class="font-black tabular-nums tracking-tight text-accent-500 transition-colors select-none">
               00:00</div>
             <input id="timer-minutes-input" type="number" min="1" max="999" placeholder="Min"
-              class="w-16 sm:w-20 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-center text-sm font-semibold focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition shadow-sm">
+              class="w-16 sm:w-20 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-center text-sm font-semibold focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition shadow-sm">
             <div class="flex gap-1.5 sm:gap-2">
               <button
-                class="timer-preset px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-500 hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600 dark:hover:bg-pink-900/30 dark:hover:text-pink-400 transition"
+                class="timer-preset px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-500 hover:bg-accent-50 hover:border-accent-200 hover:text-accent-600 dark:hover:bg-accent-900/30 dark:hover:text-accent-400 transition"
                 data-minutes="5">5m</button>
               <button
-                class="timer-preset px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-500 hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600 dark:hover:bg-pink-900/30 dark:hover:text-pink-400 transition"
+                class="timer-preset px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-500 hover:bg-accent-50 hover:border-accent-200 hover:text-accent-600 dark:hover:bg-accent-900/30 dark:hover:text-accent-400 transition"
                 data-minutes="15">15m</button>
               <button
-                class="timer-preset px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-500 hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600 dark:hover:bg-pink-900/30 dark:hover:text-pink-400 transition"
+                class="timer-preset px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-500 hover:bg-accent-50 hover:border-accent-200 hover:text-accent-600 dark:hover:bg-accent-900/30 dark:hover:text-accent-400 transition"
                 data-minutes="25">25m</button>
               <button
-                class="timer-preset px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-500 hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600 dark:hover:bg-pink-900/30 dark:hover:text-pink-400 transition hidden sm:block"
+                class="timer-preset px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-500 hover:bg-accent-50 hover:border-accent-200 hover:text-accent-600 dark:hover:bg-accent-900/30 dark:hover:text-accent-400 transition hidden sm:block"
                 data-minutes="45">45m</button>
               <button
-                class="timer-preset px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-500 hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600 dark:hover:bg-pink-900/30 dark:hover:text-pink-400 transition hidden lg:block"
+                class="timer-preset px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-500 hover:bg-accent-50 hover:border-accent-200 hover:text-accent-600 dark:hover:bg-accent-900/30 dark:hover:text-accent-400 transition hidden lg:block"
                 data-minutes="60">60m</button>
             </div>
             <button id="timer-start-btn"
-              class="px-5 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-bold shadow-md hover:shadow-lg hover:shadow-pink-500/30 active:scale-[0.97] transition-all ml-auto md:ml-0">Start</button>
+              class="w-24 px-5 py-2 rounded-xl bg-gradient-to-r from-accent-500 to-accent-600 dark:from-accent-500 dark:to-accent-400 text-white text-sm font-bold shadow-md hover:shadow-lg hover:shadow-accent-500/30 active:scale-[0.97] transition-all ml-auto md:ml-0">Start</button>
             <button id="timer-reset-btn"
               class="px-3 py-2 rounded-xl bg-white shadow-sm border border-gray-100 dark:border-gray-700 dark:bg-gray-800 text-gray-400 text-sm font-semibold hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-700 transition"
               title="Reset">
@@ -271,7 +290,7 @@
           <div class="bento-tasks card p-5 sm:p-6">
             <div class="flex items-center gap-2 mb-4">
               <div
-                class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                class="icon-box w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -282,7 +301,7 @@
             </div>
             <div id="tasks-container" class="space-y-3"></div>
             <button id="add-task-btn"
-              class="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 text-sm font-semibold hover:border-violet-400 hover:text-violet-500 dark:hover:border-violet-500 dark:hover:text-violet-400 transition-all flex items-center justify-center gap-1.5">
+              class="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 text-sm font-semibold hover:border-accent-400 hover:text-accent-500 dark:hover:border-accent-500 dark:hover:text-accent-400 transition-all flex items-center justify-center gap-1.5">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
@@ -297,7 +316,7 @@
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center gap-2">
                 <div
-                  class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                  class="icon-box w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center">
                   <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -339,7 +358,7 @@
           <div class="bento-donotdo card p-5 sm:p-6">
             <div class="flex items-center gap-2 mb-4">
               <div
-                class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+                class="icon-box w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
@@ -360,7 +379,7 @@
           <div class="bento-reward card p-5 sm:p-6">
             <div class="flex items-center gap-2 mb-4">
               <div
-                class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center">
+                class="icon-box w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
@@ -379,7 +398,7 @@
           <div class="bento-braindump card p-5 sm:p-6">
             <div class="flex items-center gap-2 mb-4">
               <div
-                class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                class="icon-box w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -398,7 +417,7 @@
           <div class="bento-antitodo card p-5 sm:p-6">
             <div class="flex items-center gap-2 mb-4">
               <div
-                class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                class="icon-box w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -411,7 +430,7 @@
               <input id="antitodo-input" type="text" placeholder="Log something you got done..."
                 class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm">
               <button id="antitodo-add"
-                class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-emerald-500/30 active:scale-[0.97] transition-all">
+                class="icon-box px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-emerald-500/30 active:scale-[0.97] transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -424,7 +443,7 @@
           <div class="bento-reflection card p-5 sm:p-6" id="reflection-card">
             <div class="flex items-center gap-2 mb-4">
               <div id="reflection-icon"
-                class="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center transition-all">
+                class="icon-box w-8 h-8 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center transition-all">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -489,7 +508,7 @@
             <div class="flex items-center justify-between gap-2 mb-4 shrink-0">
               <div class="flex items-center gap-2">
                 <div
-                  class="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
+                  class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-accent-600 flex items-center justify-center">
                   <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -498,16 +517,16 @@
                 <h3 class="text-lg font-bold">To Do List</h3>
               </div>
               <button id="idea-todo-filter-btn"
-                class="text-xs font-semibold text-gray-500 hover:text-pink-500 transition px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800">
+                class="text-xs font-semibold text-gray-500 hover:text-accent-500 transition px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800">
                 Show Done
               </button>
             </div>
 
             <div class="flex gap-2 mb-4 shrink-0">
               <input id="idea-todo-input" type="text" placeholder="Add a new task..."
-                class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition text-sm">
+                class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition text-sm">
               <button id="idea-todo-add"
-                class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-pink-500/30 active:scale-[0.97] transition-all">
+                class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-accent-500 to-accent-600 text-white text-sm font-semibold hover:shadow-lg hover:shadow-accent-500/30 active:scale-[0.97] transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -528,7 +547,7 @@
           <div class="flex items-center justify-between mb-4 shrink-0">
             <h3 class="text-lg font-bold">Notes</h3>
             <button id="add-note-btn"
-              class="p-2 rounded-xl bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 hover:bg-violet-200 transition"
+              class="p-2 rounded-xl bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 hover:bg-accent-200 transition"
               title="New Note">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -552,7 +571,7 @@
           <div id="note-editor" class="hidden flex-col h-full">
             <div class="flex justify-between items-center mb-4 shrink-0 gap-4">
               <input id="note-title-input" type="text" placeholder="Note Title"
-                class="text-2xl font-bold bg-transparent outline-none flex-1 border-b border-transparent focus:border-violet-500 transition px-2 py-1">
+                class="text-2xl font-bold bg-transparent outline-none flex-1 border-b border-transparent focus:border-accent-500 transition px-2 py-1">
               <div class="flex gap-2">
                 <span id="note-save-status"
                   class="text-xs text-gray-400 self-center opacity-0 transition-opacity">Saving...</span>
@@ -588,9 +607,9 @@
       <div class="space-y-3 mb-6">
         <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">North Star Goal</h3>
         <input id="north-star-input" type="text" placeholder="What's your ultimate goal right now?"
-          class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
+          class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition text-sm">
         <button id="north-star-save"
-          class="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 transition">Save
+          class="w-full py-2.5 rounded-xl bg-gradient-to-r from-accent-600 to-accent-600 text-white font-semibold text-sm hover:opacity-90 transition">Save
           Goal</button>
       </div>
       <div class="space-y-4 mb-6">
@@ -601,23 +620,66 @@
             <p class="text-xs text-gray-400">Switch between light and dark themes</p>
           </div>
           <button id="settings-theme-toggle"
-            class="relative w-12 h-6 rounded-full bg-gray-200 dark:bg-violet-600 transition-colors duration-300 focus:outline-none">
+            class="relative w-12 h-6 rounded-full bg-gray-300 dark:bg-accent-600 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 dark:focus:ring-offset-gray-900 border border-gray-400 dark:border-accent-500 shadow-inner">
             <div
-              class="settings-toggle-knob absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300">
+              class="settings-toggle-knob absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 transform dark:translate-x-6">
             </div>
           </button>
         </div>
+        
 
-      </div>
+        <div class="flex flex-col gap-3 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 mt-3">
+          <div>
+            <p class="font-medium text-sm">Accent Color</p>
+            <p class="text-xs text-gray-400">Choose your favorite flavor</p>
+          </div>
+          <div class="flex flex-wrap gap-3 mt-1" id="accent-color-selector">
+            <!-- Theme selector buttons will be injected or hard-coded here -->
+            <button class="w-8 h-8 rounded-full bg-violet-500 border-2 border-transparent transition-all hover:scale-110 flex items-center justify-center text-white focus:outline-none hover:shadow-md hover:shadow-violet-500/20" data-theme="purple" title="Purple"></button>
+            <button class="w-8 h-8 rounded-full bg-orange-500 border-2 border-transparent transition-all hover:scale-110 flex items-center justify-center text-white focus:outline-none hover:shadow-md hover:shadow-orange-500/20" data-theme="orange" title="Ubuntu Orange"></button>
+            <button class="w-8 h-8 rounded-full bg-blue-500 border-2 border-transparent transition-all hover:scale-110 flex items-center justify-center text-white focus:outline-none hover:shadow-md hover:shadow-blue-500/20" data-theme="blue" title="Blue"></button>
+            <button class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-transparent transition-all hover:scale-110 flex items-center justify-center text-white focus:outline-none hover:shadow-md hover:shadow-emerald-500/20" data-theme="green" title="Green"></button>
+            <button class="w-8 h-8 rounded-full bg-red-500 border-2 border-transparent transition-all hover:scale-110 flex items-center justify-center text-white focus:outline-none hover:shadow-md hover:shadow-red-500/20" data-theme="red" title="Red"></button>
+            <button class="w-8 h-8 rounded-full bg-yellow-400 border-2 border-transparent transition-all hover:scale-110 flex items-center justify-center text-white focus:outline-none hover:shadow-md hover:shadow-yellow-400/20" data-theme="yellow" title="Yellow"></button>
+            <button class="w-8 h-8 rounded-full bg-cyan-500 border-2 border-transparent transition-all hover:scale-110 flex items-center justify-center text-white focus:outline-none hover:shadow-md hover:shadow-cyan-500/20" data-theme="cyan" title="Cyan"></button>
+            <button class="w-8 h-8 rounded-full bg-rose-500 border-2 border-transparent transition-all hover:scale-110 flex items-center justify-center text-white focus:outline-none hover:shadow-md hover:shadow-rose-500/20" data-theme="rose" title="Rose"></button>
+            
+            <!-- Custom Color Picker -->
+            <div class="relative flex items-center justify-center w-8 h-8 rounded-full transition-all hover:scale-110 hover:shadow-md bg-gray-100 dark:bg-gray-800 border-2 border-transparent cursor-pointer" title="Custom Color" id="custom-picker-trigger">
+              <div class="w-full h-full rounded-full flex items-center justify-center z-10" id="custom-accent-preview">
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" id="custom-accent-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <svg class="w-4 h-4 text-white drop-shadow-md hidden" id="custom-accent-check" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 mt-3">
+            <div>
+              <p class="font-medium text-sm">Accent Icons</p>
+              <p class="text-xs text-gray-400">Apply accent color to all card icons</p>
+            </div>
+            <button id="settings-icon-toggle"
+              class="relative w-12 h-6 rounded-full bg-gray-300 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 dark:focus:ring-offset-gray-900 border border-gray-400 shadow-inner">
+              <div
+                class="settings-toggle-knob absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 transform">
+              </div>
+            </button>
+          </div>
+          </div>
+        </div>
+
       <div class="space-y-4 mb-6">
         <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Security</h3>
         <form id="change-password-form" class="space-y-3">
           <input id="current-password" type="password" placeholder="Current password" required
-            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition text-sm">
           <input id="new-password" type="password" placeholder="New password (8+ chars)" required
-            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition text-sm">
           <input id="confirm-new-password" type="password" placeholder="Confirm new password" required
-            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition text-sm">
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition text-sm">
           <div id="password-msg" class="text-sm text-center hidden"></div>
           <button type="submit"
             class="w-full py-2.5 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold text-sm hover:opacity-90 transition">Change
@@ -683,12 +745,14 @@
     </div>
   </div>
 
+
+
   <!-- ============ IDEA MODAL ============ -->
   <div id="idea-modal" class="modal-overlay hidden">
     <div class="modal-content card p-6 sm:p-8 w-full max-w-2xl mx-4 rounded-3xl flex flex-col max-h-[90vh]">
       <div class="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-800 pb-4 shrink-0">
         <input id="idea-modal-title" type="text"
-          class="text-xl font-bold bg-transparent outline-none flex-1 border-b border-transparent focus:border-violet-500 transition px-2 py-1"
+          class="text-xl font-bold bg-transparent outline-none flex-1 border-b border-transparent focus:border-accent-500 transition px-2 py-1"
           placeholder="Idea Title">
         <div class="flex items-center gap-2">
           <button id="idea-modal-delete"
@@ -713,7 +777,7 @@
         <span id="idea-modal-status"
           class="text-xs text-gray-400 self-center mr-4 opacity-0 transition-opacity">Saving...</span>
         <button id="idea-modal-save"
-          class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:shadow-lg hover:shadow-violet-500/30 active:scale-[0.97] transition-all">
+          class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-accent-600 to-accent-600 text-white font-semibold text-sm hover:shadow-lg hover:shadow-accent-500/30 active:scale-[0.97] transition-all">
           Save Idea
         </button>
       </div>
