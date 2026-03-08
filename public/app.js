@@ -16,7 +16,8 @@ let activeNoteId = null;
 let activeIdeaId = null;
 let currentView = 'dashboard'; // 'dashboard' | 'ideas' | 'notes'
 let currentPrefs = {};
-const MAX_TASKS = 21;
+// limit the number of tasks a user can create per day (backend enforces same)
+const MAX_TASKS = 5;
 const DEFAULT_TASKS = 3;
 
 // ===== HELPERS =====
