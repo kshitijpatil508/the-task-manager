@@ -1,6 +1,6 @@
 # ⚡ The Task Manager
 
-A sleek, opinionated daily productivity dashboard built with **Node.js** and a gorgeous **dark glassmorphism** UI. Designed around the philosophy of doing *fewer things, better* — with a strict **5‑task daily limit**, carry‑over tracking, and built‑in reflection.
+A sleek, opinionated daily productivity dashboard built with **Node.js** and **MongoDB**, featuring a gorgeous **dark glassmorphism** UI. Designed around the philosophy of doing _fewer things, better_ — with a strict **5‑task daily limit**, carry‑over tracking, and built‑in reflection.
 
 ![Dashboard Overview](docs/dashboard.png)
 
@@ -8,49 +8,14 @@ A sleek, opinionated daily productivity dashboard built with **Node.js** and a g
 
 ## ✨ Features
 
-### 🎯 Daily 3 — Task Management
-- **Strict 5‑task cap** — start with 3 slots, expand to 5 max. No more.
-- **Custom color‑coded status dropdowns** — Todo (gray), In Progress (amber), Done (emerald), Cancelled (red)
-- **Expandable task descriptions** — click the description icon to reveal a notes area
-- **Auto‑saving** — every keystroke is debounced and persisted automatically
-
-![Custom Dropdowns](docs/dropdown.png)
-
-### 🔄 Carry‑Over System
-- Detects unfinished tasks from yesterday and shows a **carry‑over banner**
-- Displays real‑time **capacity info**: *"2 task(s) from yesterday • Capacity: 1 slot(s) free"*
-- **Hard block** if tasks exceed capacity — red toast alert, no tasks moved
-- **Smart insertion** — fills empty slots first, then appends up to the limit
-- **↻N carry badge** — visual indicator showing how many times a task was carried forward
-
-### 📅 Calendar
-- **Mini calendar** with month/year navigation
-- Click any date to view/edit that day's tasks
-- **Green highlight** on days where all tasks were completed ✅
-- **Violet dot** on days that have tasks but aren't fully done
-
-### 🧰 Productivity Modules
-
-![Productivity Modules](docs/modules.png)
-
-| Module | Description |
-|--------|-------------|
-| 🚫 **Do NOT Do** | List up to 3 things to *avoid* today |
-| 🎁 **Daily Reward** | What you'll treat yourself to after finishing |
-| 🧠 **Brain Dump** | Free‑form textarea to clear your head |
-| ✅ **Anti‑To‑Do** | Log things you *already did* (wins you didn't plan) |
-| 🔒 **End‑of‑Day Reflection** | Two prompts — unlocks only when all tasks are Done |
-
-### ⚙️ Settings
-
-![Settings Modal](docs/settings.png)
-
-- **North Star Goal** — a persistent motivational headline
-- **Dark Mode / Light Mode** toggle
-- **Glassmorphism** toggle (frosted‑glass card effect)
-- **Password change**
-- **Export / Import** data as JSON
-- **Danger Zone** — full data reset
+- **Strict 5‑task cap**: Focus on what matters with a maximum of 5 tasks per day.
+- **Customizable task statuses**: Color-coded Todo, In Progress, Done, and Cancelled.
+- **Expandable task descriptions**: Add detailed notes to each task.
+- **Auto-saving**: All changes are automatically persisted.
+- **Carry-Over System**: Smartly carries over unfinished tasks from the previous day, with capacity checks and visual indicators.
+- **Interactive Calendar**: Navigate tasks by date, with visual cues for completed days.
+- **Productivity Modules**: Includes "Do NOT Do" list, "Daily Reward", "Brain Dump", "Anti‑To‑Do", and "End‑of‑Day Reflection".
+- **User Settings**: North Star Goal, Dark/Light Mode toggle, Glassmorphism effect, password change, data export/import, and full data reset.
 
 ---
 
@@ -58,13 +23,12 @@ A sleek, opinionated daily productivity dashboard built with **Node.js** and a g
 
 ```
 The Task Manager/
-├── server.js             # Express backend — API, auth, data persistence
-├── data.json             # JSON flat‑file database (auto-created)
+├── server.js             # Express backend — API, auth, data persistence (MongoDB)
 ├── package.json          # Dependencies & scripts
 ├── .env                  # Environment variables (see below)
 ├── .gitignore            # Ignores node_modules/ and .env
-├── Dockerfile            # Multi-stage Docker build
-├── docker-compose.yml    # One-command deployment
+├── Dockerfile            # Multi-stage Docker build for the Node.js app
+├── docker-compose.yml    # One-command deployment with Node.js app and MongoDB
 ├── .dockerignore         # Keeps Docker image lean
 ├── docs/                 # Screenshots for README
 │   ├── dashboard.png
@@ -83,384 +47,259 @@ The Task Manager/
 
 ### Prerequisites
 
-- **Node.js** ≥ 18.x
-- **npm** ≥ 9.x
+Before you begin, ensure you have the following installed:
 
-### 1. Clone the repository
+- **Node.js** (>= 18.x) and **npm** (>= 9.x) - for local development
+- **Docker** and **Docker Compose** - for recommended deployment
 
-```bash
-git clone https://github.com/kshitijpatil508/the-task-manager.git
-cd the-task-manager
-```
+### Recommended Deployment (Docker Compose with MongoDB)
 
-### 2. Install dependencies
+The easiest and recommended way to run The Task Manager is using Docker Compose, which sets up both the Node.js application and a MongoDB database with a single command.
 
-```bash
-npm install
-```
+1.  **Clone the repository:**
 
-This installs:
-| Package | Purpose |
-|---------|---------|
-| `express` | Web server & API routing |
-| `bcrypt` | Password hashing |
-| `jsonwebtoken` | JWT‑based authentication |
-| `cors` | Cross‑origin request handling |
-| `dotenv` | Environment variable loading |
+    ```bash
+    git clone https://github.com/kshitijpatil508/the-task-manager.git
+    cd the-task-manager
+    ```
 
-### 3. Configure environment variables
+2.  **Start the application with Docker Compose:**
 
-Create a `.env` file in the project root:
+    ```bash
+    docker compose up -d
+    ```
 
-```env
-# Secret key for signing JWT tokens — use a long random string
-# A default is built in, but you should change this for production
-JWT_SECRET=your-secret-key-here-change-this-in-production
+    This command will:
+    - Build the `task-manager` Docker image (based on `Dockerfile`).
+    - Start a MongoDB container (`mongodb_container`).
+    - Start the `task-manager` application container, connected to MongoDB.
+    - Expose the application on port `3000`.
+    - Create a named Docker volume (`mongodb_data`) for persistent MongoDB storage.
 
-# Port the server listens on
-PORT=3000
+3.  **Access the application:**
+    Open your browser and go to **http://localhost:3000**.
 
-# Directory where data.json is stored (default: project root)
-# The Docker image uses /data — see Docker section below
-# DATA_DIR=/path/to/data
-```
+### Local Development (Node.js with local or Dockerized MongoDB)
 
-> [!IMPORTANT]
-> **Generate a strong JWT secret for production.** You can use:
-> ```bash
-> node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-> ```
+If you prefer to run the application directly on your machine for development, you'll need Node.js, npm, and a running MongoDB instance.
 
-### 4. Start the server
+1.  **Clone the repository:**
 
-```bash
-# Production
-npm start
+    ```bash
+    git clone https://github.com/kshitijpatil508/the-task-manager.git
+    cd the-task-manager
+    ```
 
-# Development (same command, but you can restart manually)
-npm run dev
-```
+2.  **Install Node.js dependencies:**
 
-The app will be available at **http://localhost:3000**.
+    ```bash
+    npm install
+    ```
 
-### 5. Create your account
+3.  **Set up MongoDB:**
+    You can either run MongoDB locally or use the `mongodb_container` from the `docker-compose.yml` file.
+    - **Option A: Run MongoDB using Docker (recommended for local development):**
+      To start only the MongoDB container from `docker-compose.yml`:
 
-Open the app in your browser. You'll see a login screen — click **Register** to create a new account with a username and password. Each user gets their own isolated data.
+      ```bash
+      docker compose up -d mongodb_container
+      ```
 
----
+      This will start a MongoDB instance accessible at `mongodb://admin:password123@localhost:27017/taskmanager?authSource=admin`.
 
-## 🐳 Docker Deployment
+    - **Option B: Install and run MongoDB locally:**
+      Refer to the official MongoDB documentation for installation instructions for your operating system.
 
-The fastest way to deploy — works out of the box with zero configuration.
+4.  **Configure environment variables:**
+    Create a `.env` file in the project root with the following variables. If using the Dockerized MongoDB from Option A, the `MONGODB_URI` can be `mongodb://admin:password123@localhost:27017/taskmanager?authSource=admin`.
 
-### Quick Start (Docker Compose)
+    ```env
+    # Secret key for signing JWT tokens — use a long random string
+    # A default is built in, but you should change this for production
+    JWT_SECRET=your-secret-key-here-change-this-in-production
 
-Create a `docker-compose.yml` file anywhere on your machine:
+    # Port the server listens on
+    PORT=3000
 
-```yaml
-services:
-  task-manager:
-    image: kshitijpatil508/task-manager:latest
-    container_name: task-manager
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - JWT_SECRET=tm_default_jwt_s3cret_k3y_2026
-    volumes:
-      - task-data:/data
+    # MongoDB Connection URI
+    # For local MongoDB, replace 'mongodb_container' with 'localhost'
+    MONGODB_URI=mongodb://admin:password123@localhost:27017/taskmanager?authSource=admin
 
-volumes:
-  task-data:
-    driver: local
-```
+    # Admin credentials for the admin panel
+    ADMIN_USER=admin
+    ADMIN_PASS=Admin@1234
+    ```
 
-Then run:
+    > [!IMPORTANT]
+    > **Generate a strong `JWT_SECRET` for production.** You can use:
+    >
+    > ```bash
+    > node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+    > ```
 
-```bash
-docker compose up -d
-```
+5.  **Start the server:**
 
-That's it! The app is live at **http://localhost:3000** with:
-- A **default JWT secret** baked in (works immediately, change for production)
-- A **named Docker volume** (`task-data`) for persistent storage
-- **Auto-restart** on crash or reboot
+    ```bash
+    # For production environment variables
+    npm start
 
-### Custom Configuration
+    # For development (e.g., if you have nodemon setup)
+    npm run dev
+    ```
 
-Override any setting via environment variables in `docker-compose.yml`:
+    The app will be available at **http://localhost:3000**.
 
-```yaml
-services:
-  task-manager:
-    image: kshitijpatil508/task-manager:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - JWT_SECRET=my-super-secret-production-key
-      - PORT=3000
-    volumes:
-      - task-data:/data
-```
-
-Or pass environment variables directly:
-
-```bash
-JWT_SECRET=my-secret docker compose up -d
-```
-
-### Standalone Docker (without Compose)
-
-```bash
-# Pull the image
-docker pull kshitijpatil508/task-manager:latest
-
-# Run with a named volume for data persistence
-docker run -d \
-  --name task-manager \
-  --restart unless-stopped \
-  -p 3000:3000 \
-  -v task-data:/data \
-  kshitijpatil508/task-manager:latest
-```
-
-### Docker Image Details
-
-| Property | Value |
-|----------|-------|
-| Base image | `node:20-alpine` |
-| Image size | ~120 MB |
-| Runs as | Non-root `node` user |
-| Health check | `wget http://localhost:3000/` every 30s |
-| Data volume | `/data` (stores `data.json`) |
-| Build | Multi-stage (deps cached separately) |
-
-### Docker + Caddy
-
-To expose with HTTPS via Caddy, add Caddy to your `docker-compose.yml`:
-
-```yaml
-services:
-  task-manager:
-    image: kshitijpatil508/task-manager:latest
-    restart: unless-stopped
-    volumes:
-      - task-data:/data
-
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy-data:/data
-      - caddy-config:/config
-
-volumes:
-  task-data:
-  caddy-data:
-  caddy-config:
-```
-
-With a `Caddyfile`:
-
-```caddyfile
-tasks.yourdomain.com {
-    reverse_proxy task-manager:3000
-}
-```
-
-Then:
-```bash
-docker compose up -d
-```
+6.  **Create your account:**
+    Open the app in your browser. You'll see a login screen — click **Register** to create a new account with a username and password. Each user gets their own isolated data.
 
 ---
 
 ## 🌐 Deploying with Caddy (Reverse Proxy + HTTPS)
 
-[Caddy](https://caddyserver.com/) is the easiest way to expose the app to the internet with **automatic HTTPS**.
+For production deployments, it's highly recommended to use a reverse proxy like Caddy to handle HTTPS and domain management.
 
-### Prerequisites
+**Using Caddy with Docker Compose**
 
-- A **domain name** pointing to your server (e.g., `tasks.yourdomain.com`)
-- **Caddy** installed on your server — [install guide](https://caddyserver.com/docs/install)
+Integrate Caddy directly into your `docker-compose.yml` for a streamlined deployment.
 
-### Step 1: Install Caddy
+1.  **Update `docker-compose.yml`:**
+    Add a Caddy service to your `docker-compose.yml`:
 
-**macOS (Homebrew):**
-```bash
-brew install caddy
-```
+    ```yaml
+    services:
+      mongodb_container:
+        image: mongo:latest
+        container_name: mongodb_container
+        restart: unless-stopped
+        ports:
+          - "27017:27017"
+        environment:
+          - MONGO_INITDB_ROOT_USERNAME=admin
+          - MONGO_INITDB_ROOT_PASSWORD=password123
+        volumes:
+          - mongodb_data:/data/db
 
-**Ubuntu/Debian:**
-```bash
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update
-sudo apt install caddy
-```
+      task-manager:
+        build: .
+        image: kshitijpatil508/task-manager:latest
+        container_name: task-manager
+        restart: unless-stopped
+        environment:
+          - PORT=3000
+          - MONGODB_URI=mongodb://admin:password123@mongodb_container:27017/taskmanager?authSource=admin
+          - ADMIN_USER=admin
+          - ADMIN_PASS=Admin@1234
+        depends_on:
+          - mongodb_container
 
-### Step 2: Create a Caddyfile
+      caddy:
+        image: caddy:2-alpine
+        restart: unless-stopped
+        ports:
+          - "80:80"
+          - "443:443"
+        volumes:
+          - ./Caddyfile:/etc/caddy/Caddyfile
+          - caddy_data:/data
+          - caddy_config:/config
+        depends_on:
+          - task-manager # Caddy depends on the task-manager service
 
-Create a file called `Caddyfile` in your project root (or `/etc/caddy/Caddyfile`):
+    volumes:
+      mongodb_data:
+        driver: local
+      caddy_data:
+      caddy_config:
+    ```
 
-```caddyfile
-tasks.yourdomain.com {
-    reverse_proxy localhost:3000
-}
-```
+2.  **Create a `Caddyfile`:**
+    In the same directory as your `docker-compose.yml`, create a file named `Caddyfile` with your domain. Replace `tasks.yourdomain.com` with your actual domain.
 
-That's it — Caddy handles **SSL certificate provisioning** (via Let's Encrypt), **HTTPS redirect**, and **HTTP/2** automatically.
+    ```caddyfile
+    tasks.yourdomain.com {
+        reverse_proxy task-manager:3000
+    }
+    ```
 
-### Step 3: Start the Node.js app
+    For local-only HTTPS (e.g., for development on `localhost`):
 
-Make sure your app is running in the background. Use **systemd** or **pm2**:
+    ```caddyfile
+    :443 {
+        tls internal
+        reverse_proxy task-manager:3000
+    }
+    ```
 
-**Option A — Using pm2 (recommended):**
-```bash
-# Install pm2 globally
-npm install -g pm2
+    If using `tls internal` for local development, you might need to run `docker compose exec caddy caddy trust` or similar to trust the self-signed certificate in your browser.
 
-# Start the app
-pm2 start server.js --name task-manager
+3.  **Deploy with Docker Compose:**
 
-# Ensure it restarts on reboot
-pm2 startup
-pm2 save
-```
+    ```bash
+    docker compose up -d
+    ```
 
-**Option B — Using systemd:**
-
-Create `/etc/systemd/system/task-manager.service`:
-
-```ini
-[Unit]
-Description=The Task Manager
-After=network.target
-
-[Service]
-Type=simple
-User=your-username
-WorkingDirectory=/path/to/the-task-manager
-ExecStart=/usr/bin/node server.js
-Restart=always
-RestartSec=10
-EnvironmentFile=/path/to/the-task-manager/.env
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Then:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable task-manager
-sudo systemctl start task-manager
-```
-
-### Step 4: Start Caddy
-
-```bash
-# If using the Caddyfile in the project root:
-caddy start
-
-# Or run Caddy as a system service:
-sudo systemctl enable caddy
-sudo systemctl start caddy
-```
-
-### Step 5: Verify
-
-Open **https://tasks.yourdomain.com** in your browser. You should see the login screen with a valid HTTPS certificate. 🎉
-
-### Local‑only access (no domain)
-
-If you just want HTTPS on localhost or a LAN IP without a domain:
-
-```caddyfile
-:443 {
-    tls internal
-    reverse_proxy localhost:3000
-}
-```
-
-This uses Caddy's built‑in CA to generate a self‑signed certificate. Run `caddy trust` to install the root certificate on your machine so browsers trust it.
+4.  **Verify:**
+    Open `https://tasks.yourdomain.com` (or `https://localhost:443` if using internal TLS) in your browser. Caddy will automatically provision SSL certificates from Let's Encrypt and handle HTTPS.
 
 ---
 
 ## 🔒 Authentication
 
-- Users register with a **username + password** (hashed with bcrypt)
-- Login returns a **JWT token** stored in `localStorage`
-- All API routes (except `/api/register` and `/api/login`) require the `Authorization: Bearer <token>` header
-- Token‑based sessions — no cookies, no server‑side session store
-- Change your password anytime via **Settings → Security**
+- Users register with a **username + password** (hashed with bcrypt).
+- Login returns a **JWT token** stored in `localStorage`.
+- All API routes (except `/api/register` and `/api/login`) require the `Authorization: Bearer <token>` header.
+- Token‑based sessions — no cookies, no server‑side session store.
+- Change your password anytime via **Settings → Security**.
 
 ---
 
-## 📊 Data Storage
+## 📊 Data Storage (MongoDB)
 
-All data is stored in a single `data.json` file in the project root. This file is auto‑created on first run.
+All user data for The Task Manager is persistently stored in a **MongoDB** database.
 
-**Structure:**
-```json
-{
-  "users": {
-    "username": {
-      "password": "$2b$10$...",
-      "tasks": {
-        "2026-03-01": [
-          { "text": "Ship feature", "description": "", "status": "Done", "carryForwardCount": 0 }
-        ]
-      },
-      "dailyData": {
-        "2026-03-01": {
-          "doNotDo": ["Social media", "", ""],
-          "dailyReward": "Coffee break",
-          "brainDump": "Need to research...",
-          "antiToDo": ["Fixed a bug"],
-          "reflectionGood": "Great focus day!",
-          "reflectionImprove": "Start earlier"
-        }
-      },
-      "settings": {
-        "theme": "dark",
-        "glass": false,
-        "northStar": "Build a successful AI startup"
-      }
-    }
-  }
-}
-```
-
-> [!WARNING]
-> **Back up `data.json` regularly.** It's a flat file — there's no database replication. Use the built‑in **Export** feature in Settings for easy backups.
+- Each user's data is isolated within the database.
+- The `docker-compose.yml` uses a **named Docker volume** (`mongodb_data`) to ensure your data persists even if containers are removed or updated.
+- It is still recommended to use the built-in **Export** feature in Settings for easy backups, or implement regular database backups for your MongoDB instance.
 
 ---
 
 ## 🛠️ API Reference
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/register` | ✗ | Create a new user |
-| POST | `/api/login` | ✗ | Login, returns JWT |
-| GET | `/api/tasks/:date` | ✓ | Get tasks for a date |
-| POST | `/api/tasks/:date` | ✓ | Save tasks (max 5 enforced) |
-| GET | `/api/daily-data/:date` | ✓ | Get daily module data |
-| POST | `/api/daily-data/:date` | ✓ | Save daily module data |
-| GET | `/api/carry-over-check/:date` | ✓ | Check for unfinished tasks + capacity |
-| POST | `/api/carry-over` | ✓ | Carry over tasks (409 if over capacity) |
-| GET | `/api/task-dates` | ✓ | Get all dates with task data |
-| GET | `/api/settings` | ✓ | Get user settings |
-| POST | `/api/settings` | ✓ | Save user settings |
-| POST | `/api/change-password` | ✓ | Change password |
-| GET | `/api/export` | ✓ | Export all user data as JSON |
-| POST | `/api/import` | ✓ | Import user data from JSON |
-| POST | `/api/reset` | ✓ | Delete all user data |
+| Method | Endpoint                          | Auth      | Description                                      |
+| ------ | --------------------------------- | --------- | ------------------------------------------------ |
+| POST   | `/api/register`                   | ✗         | Create a new user                                |
+| POST   | `/api/login`                      | ✗         | Login, returns JWT                               |
+| GET    | `/api/tasks/:date`                | ✓         | Get tasks for a date                             |
+| POST   | `/api/tasks/:date`                | ✓         | Save tasks (max 5 enforced)                      |
+| GET    | `/api/daily-data/:date`           | ✓         | Get daily module data                            |
+| POST   | `/api/daily-data/:date`           | ✓         | Save daily module data                           |
+| GET    | `/api/carry-over-check/:date`     | ✓         | Check for unfinished tasks + capacity            |
+| POST   | `/api/carry-over`                 | ✓         | Carry over tasks (409 if over capacity)          |
+| GET    | `/api/task-dates`                 | ✓         | Get all dates with task data                     |
+| POST   | `/api/settings/password`          | ✓         | Change password                                  |
+| POST   | `/api/settings/preferences`       | ✓         | Save user preferences (dark mode, glassmorphism) |
+| GET    | `/api/settings/preferences`       | ✓         | Get user preferences                             |
+| DELETE | `/api/account`                    | ✓         | Delete user account and all associated data      |
+| POST   | `/api/settings/north-star`        | ✓         | Set North Star Goal                              |
+| GET    | `/api/settings/north-star`        | ✓         | Get North Star Goal                              |
+| GET    | `/api/ideas`                      | ✓         | Get all ideas                                    |
+| POST   | `/api/ideas`                      | ✓         | Create a new idea                                |
+| PUT    | `/api/ideas/:id`                  | ✓         | Update an idea                                   |
+| DELETE | `/api/ideas/:id`                  | ✓         | Delete an idea                                   |
+| GET    | `/api/idea-todos`                 | ✓         | Get all idea todos                               |
+| POST   | `/api/idea-todos`                 | ✓         | Create a new idea todo                           |
+| PUT    | `/api/idea-todos/:id`             | ✓         | Update an idea todo (title, completed status)    |
+| DELETE | `/api/idea-todos/:id`             | ✓         | Delete an idea todo                              |
+| GET    | `/api/notes`                      | ✓         | Get all notes                                    |
+| POST   | `/api/notes`                      | ✓         | Create a new note                                |
+| PUT    | `/api/notes/:id`                  | ✓         | Update a note                                    |
+| DELETE | `/api/notes/:id`                  | ✓         | Delete a note                                    |
+| GET    | `/api/timer`                      | ✓         | Get user timer state                             |
+| POST   | `/api/timer`                      | ✓         | Save user timer state                            |
+| GET    | `/api/export`                     | ✓         | Export all user data as JSON                     |
+| POST   | `/api/import`                     | ✓         | Import user data from JSON                       |
+| POST   | `/api/admin/login`                | ✗         | Admin login, returns JWT                         |
+
 
 ---
 
