@@ -11,7 +11,6 @@
   --ac-800: 76 24 124;
   --ac-900: 55 17 90;
   --ac-950: 28 9 45;
-}
 
   --card-bg: #ffffff;
   --card-border: rgba(0, 0, 0, 0.06);
@@ -20,7 +19,6 @@
   --glass-border: rgba(255, 255, 255, 0.5);
   --glass-blur: blur(24px);
 }
-
 
 [data-theme="orange"] {
   --ac-50: 255 242 230;
@@ -138,8 +136,8 @@
   --card-bg: #0d1117;
   --card-border: rgba(255, 255, 255, 0.06);
   --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.4);
-  --glass-bg: rgba(0, 0, 0, 0.40);
-  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-bg: rgba(0, 0, 0, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 *,
@@ -149,8 +147,10 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  transition: background-color 0.3s, color 0.3s;
+  font-family: "Inter", sans-serif;
+  transition:
+    background-color 0.3s,
+    color 0.3s;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
 }
@@ -160,8 +160,14 @@ body {
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.025);
-  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s, transform 0.15s;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -2px rgba(0, 0, 0, 0.025);
+  transition:
+    background 0.3s,
+    border-color 0.3s,
+    box-shadow 0.3s,
+    transform 0.15s;
 }
 
 .dark .card {
@@ -188,13 +194,17 @@ body {
 /* Auth — completely neutral, no accent influence */
 .auth-card {
   background: #ffffff;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 10px 30px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .dark .auth-card {
   background: #0d1117;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 10px 30px rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -351,13 +361,17 @@ body {
 }
 
 @keyframes alarmSlideIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
-
 @keyframes timerPulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -522,7 +536,10 @@ body {
   max-height: 0;
   overflow: hidden;
   opacity: 0;
-  transition: max-height 0.3s ease, opacity 0.2s ease, margin-top 0.3s ease;
+  transition:
+    max-height 0.3s ease,
+    opacity 0.2s ease,
+    margin-top 0.3s ease;
   margin-top: 0;
 }
 
@@ -634,7 +651,7 @@ body {
   filter: brightness(0.95);
 }
 
-.status-menu-item+.status-menu-item {
+.status-menu-item + .status-menu-item {
   margin-top: 0.125rem;
 }
 
@@ -706,7 +723,9 @@ body {
   font-weight: 500;
   background: rgba(239, 68, 68, 0.03);
   color: inherit;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 }
 
 .donotdo-input:focus {
@@ -765,7 +784,9 @@ body {
   color: #9ca3af;
   font-size: 0.75rem;
   opacity: 0;
-  transition: opacity 0.2s, color 0.2s;
+  transition:
+    opacity 0.2s,
+    color 0.2s;
 }
 
 .antitodo-item:hover .antitodo-remove {
@@ -853,7 +874,7 @@ body {
 }
 
 .cal-day.has-tasks::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 2px;
   width: 4px;
@@ -893,12 +914,20 @@ body {
 
 /* ===== CARRY-OVER ===== */
 .carry-over-bar {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(251, 191, 36, 0.08));
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.08),
+    rgba(251, 191, 36, 0.08)
+  );
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .dark .carry-over-bar {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(251, 191, 36, 0.05));
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.1),
+    rgba(251, 191, 36, 0.05)
+  );
   border-color: rgba(245, 158, 11, 0.15);
 }
 
@@ -1198,7 +1227,9 @@ body {
 .idea-add-card {
   border: 2px dashed rgb(var(--ac-600) / 0.2);
   padding: 1.25rem 1.5rem;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 }
 
 .timer-running {
@@ -1217,7 +1248,7 @@ body {
   border: none;
   outline: none;
   background: transparent;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   color: inherit;
 }
 
@@ -1295,12 +1326,19 @@ body {
 }
 
 body::before {
-  content: '';
+  content: "";
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   pointer-events: none;
   z-index: -1;
-  background: radial-gradient(circle at 50% 0%, rgb(var(--ac-500)) 0%, transparent 70%);
+  background: radial-gradient(
+    circle at 50% 0%,
+    rgb(var(--ac-500)) 0%,
+    transparent 70%
+  );
   opacity: 0.25;
   filter: blur(200px) saturate(100%);
 }
@@ -1313,7 +1351,11 @@ body::before {
 
 /* ===== ICON ACCENT TOGGLE ===== */
 .accent-icons .icon-box {
-  background: linear-gradient(135deg, rgb(var(--ac-500)), rgb(var(--ac-600))) !important;
+  background: linear-gradient(
+    135deg,
+    rgb(var(--ac-500)),
+    rgb(var(--ac-600))
+  ) !important;
 }
 
 /* ===== CUSTOM COLOR PICKER MODAL ===== */
@@ -1349,7 +1391,16 @@ body::before {
   height: 12px;
   border-radius: 6px;
   cursor: pointer;
-  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  background: linear-gradient(
+    to right,
+    #f00,
+    #ff0,
+    #0f0,
+    #0ff,
+    #00f,
+    #f0f,
+    #f00
+  );
   -webkit-appearance: none;
   appearance: none;
   outline: none;
@@ -1362,12 +1413,14 @@ body::before {
   height: 20px;
   border-radius: 50%;
   background: white;
-  border: 2px solid rgba(0,0,0,0.2);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   cursor: pointer;
 }
 
-.color-picker-sat, .color-picker-light, .color-picker-alpha {
+.color-picker-sat,
+.color-picker-light,
+.color-picker-alpha {
   width: 100%;
   height: 10px;
   border-radius: 5px;
@@ -1386,7 +1439,7 @@ body::before {
   height: 18px;
   border-radius: 50%;
   background: white;
-  border: 2px solid rgba(0,0,0,0.15);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   cursor: pointer;
 }
