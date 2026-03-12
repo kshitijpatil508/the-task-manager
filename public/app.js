@@ -269,7 +269,141 @@ function showDashboard() {
   buildCalendar();
   loadTaskDates();
   checkCarryOver();
+
+  // Check if we should show onboarding
+  checkAndShowOnboarding();
 }
+
+// ===== ONBOARDING =====
+let currentOnboardingStep = 1;
+const totalOnboardingSteps = 5;
+
+function checkAndShowOnboarding() {
+  const hasSeenOnboarding = localStorage.getItem("tm_onboarding_completed");
+  if (!hasSeenOnboarding) {
+    showOnboarding();
+  }
+}
+
+function showOnboarding() {
+  const overlay = document.getElementById("onboarding-overlay");
+  overlay.classList.remove("hidden");
+  currentOnboardingStep = 1;
+  updateOnboardingStep();
+}
+
+function hideOnboarding() {
+  const overlay = document.getElementById("onboarding-overlay");
+  overlay.classList.add("hidden");
+  localStorage.setItem("tm_onboarding_completed", "true");
+}
+
+function updateOnboardingStep() {
+  // Hide all steps
+  document.querySelectorAll(".onboarding-step").forEach((step) => {
+    step.classList.add("hidden");
+  });
+
+  // Show current step
+  const currentStep = document.querySelector(
+    `.onboarding-step[data-step="${currentOnboardingStep}"]`,
+  );
+  if (currentStep) {
+    currentStep.classList.remove("hidden");
+  }
+
+  // Update dots
+  document.querySelectorAll(".onboarding-dot").forEach((dot) => {
+    const dotStep = parseInt(dot.dataset.dot);
+    dot.classList.toggle("active", dotStep === currentOnboardingStep);
+  });
+
+  // Update next button
+  const nextBtn = document.getElementById("onboarding-next");
+  if (currentOnboardingStep === totalOnboardingSteps) {
+    nextBtn.textContent = "Get Started!";
+    nextBtn.classList.add("finish");
+  } else {
+    nextBtn.textContent = "Next";
+    nextBtn.classList.remove("finish");
+  }
+}
+
+function nextOnboardingStep() {
+  if (currentOnboardingStep < totalOnboardingSteps) {
+    currentOnboardingStep++;
+    updateOnboardingStep();
+  } else {
+    hideOnboarding();
+  }
+}
+
+function skipOnboarding() {
+  hideOnboarding();
+}
+
+// Setup onboarding event listeners
+document.addEventListener("DOMContentLoaded", () => {
+  const nextBtn = document.getElementById("onboarding-next");
+  const skipBtn = document.getElementById("onboarding-skip");
+  const closeBtn = document.getElementById("onboarding-close");
+
+  if (nextBtn) {
+    nextBtn.addEventListener("click", nextOnboardingStep);
+  }
+
+  if (skipBtn) {
+    skipBtn.addEventListener("click", skipOnboarding);
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", skipOnboarding);
+  }
+
+  // Allow clicking on dots to jump to specific step
+  document.querySelectorAll(".onboarding-dot").forEach((dot) => {
+    dot.addEventListener("click", () => {
+      const step = parseInt(dot.dataset.dot);
+      currentOnboardingStep = step;
+      updateOnboardingStep();
+    });
+  });
+
+  // Close onboarding when clicking outside the modal
+  const overlay = document.getElementById("onboarding-overlay");
+  if (overlay) {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        skipOnboarding();
+      }
+    });
+  }
+
+  // Keyboard navigation for onboarding
+  document.addEventListener("keydown", (e) => {
+    const overlay = document.getElementById("onboarding-overlay");
+    if (!overlay || overlay.classList.contains("hidden")) return;
+
+    if (e.key === "Escape") {
+      skipOnboarding();
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      nextOnboardingStep();
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      if (currentOnboardingStep < totalOnboardingSteps) {
+        currentOnboardingStep++;
+        updateOnboardingStep();
+      }
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      if (currentOnboardingStep > 1) {
+        currentOnboardingStep--;
+        updateOnboardingStep();
+      }
+    }
+  });
+});
 
 // ===== NAVIGATION =====
 function switchView(view) {

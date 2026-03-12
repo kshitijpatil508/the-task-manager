@@ -1480,3 +1480,359 @@ body::before {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   cursor: pointer;
 }
+
+/* ===== ONBOARDING ===== */
+.onboarding-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.onboarding-modal {
+  background: #ffffff;
+  border-radius: 2rem;
+  max-width: 600px;
+  width: 100%;
+  padding: 2.5rem;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease-out;
+}
+
+.dark .onboarding-modal {
+  background: #0d1117;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.onboarding-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 0.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #6b7280;
+}
+
+.onboarding-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #374151;
+  transform: rotate(90deg);
+}
+
+.dark .onboarding-close {
+  background: rgba(255, 255, 255, 0.05);
+  color: #9ca3af;
+}
+
+.dark .onboarding-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #d1d5db;
+}
+
+.onboarding-step {
+  text-align: center;
+  animation: stepFadeIn 0.3s ease-out;
+}
+
+@keyframes stepFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.onboarding-icon {
+  width: 5rem;
+  height: 5rem;
+  margin: 0 auto 1.5rem;
+  border-radius: 1.5rem;
+  background: linear-gradient(
+    135deg,
+    rgb(var(--ac-500)) 0%,
+    rgb(var(--ac-600)) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(var(--ac-500), 0.3);
+}
+
+.onboarding-icon.success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+}
+
+.onboarding-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, rgb(var(--ac-600)), rgb(var(--ac-400)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .onboarding-title {
+  background: linear-gradient(135deg, rgb(var(--ac-400)), rgb(var(--ac-300)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.onboarding-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+}
+
+.dark .onboarding-text {
+  color: #9ca3af;
+}
+
+.onboarding-text strong {
+  color: #374151;
+  font-weight: 700;
+}
+
+.dark .onboarding-text strong {
+  color: #e5e7eb;
+}
+
+.onboarding-features {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  text-align: left;
+}
+
+.onboarding-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 1rem;
+  transition: background 0.2s;
+}
+
+.onboarding-feature:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .onboarding-feature {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dark .onboarding-feature:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.onboarding-feature-icon {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}
+
+.onboarding-feature strong {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #1f2937;
+}
+
+.dark .onboarding-feature strong {
+  color: #f3f4f6;
+}
+
+.onboarding-feature p {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.dark .onboarding-feature p {
+  color: #9ca3af;
+}
+
+.onboarding-tip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(var(--ac-500), 0.05);
+  border-left: 3px solid rgb(var(--ac-500));
+  border-radius: 0.75rem;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.dark .onboarding-tip {
+  background: rgba(var(--ac-500), 0.1);
+  color: #d1d5db;
+}
+
+.onboarding-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2.5rem;
+  gap: 1rem;
+}
+
+.onboarding-dots {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.onboarding-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.15);
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.dark .onboarding-dot {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.onboarding-dot.active {
+  width: 1.5rem;
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: rgb(var(--ac-500));
+}
+
+.onboarding-btn-skip {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s;
+}
+
+.onboarding-btn-skip:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #374151;
+}
+
+.dark .onboarding-btn-skip {
+  color: #9ca3af;
+}
+
+.dark .onboarding-btn-skip:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #d1d5db;
+}
+
+.onboarding-btn-next {
+  background: linear-gradient(135deg, rgb(var(--ac-500)), rgb(var(--ac-600)));
+  border: none;
+  color: white;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  padding: 0.75rem 1.75rem;
+  border-radius: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(var(--ac-500), 0.25);
+}
+
+.onboarding-btn-next:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(var(--ac-500), 0.35);
+}
+
+.onboarding-btn-next:active {
+  transform: translateY(0);
+}
+
+.onboarding-btn-next.finish {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.onboarding-btn-next.finish:hover {
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+}
+
+@media (max-width: 640px) {
+  .onboarding-modal {
+    padding: 2rem 1.5rem;
+    border-radius: 1.5rem;
+  }
+
+  .onboarding-title {
+    font-size: 1.5rem;
+  }
+
+  .onboarding-text {
+    font-size: 0.9375rem;
+  }
+
+  .onboarding-icon {
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .onboarding-icon svg {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .onboarding-feature-icon {
+    font-size: 1.5rem;
+  }
+}

@@ -213,6 +213,233 @@
 
     <!-- ============ DASHBOARD ============ -->
     <div id="dashboard" class="hidden min-h-screen">
+      <!-- ============ ONBOARDING OVERLAY ============ -->
+      <div id="onboarding-overlay" class="onboarding-overlay hidden">
+        <div class="onboarding-modal">
+          <button
+            id="onboarding-close"
+            class="onboarding-close"
+            aria-label="Close onboarding"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+
+          <!-- Step 1: Welcome -->
+          <div class="onboarding-step" data-step="1">
+            <div class="onboarding-icon">
+              <svg
+                class="w-16 h-16 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+                />
+              </svg>
+            </div>
+            <h2 class="onboarding-title">Welcome to The Task Manager!</h2>
+            <p class="onboarding-text">
+              A hyper-focused productivity system designed to help you achieve
+              your goals without overwhelming you.
+            </p>
+          </div>
+
+          <!-- Step 2: 5-Task Limit -->
+          <div class="onboarding-step hidden" data-step="2">
+            <div class="onboarding-icon">
+              <svg
+                class="w-16 h-16 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                />
+              </svg>
+            </div>
+            <h2 class="onboarding-title">Focus on What Matters</h2>
+            <p class="onboarding-text">
+              You can only create <strong>5 tasks per day</strong>. This
+              constraint forces you to prioritize what truly matters.
+            </p>
+            <div class="onboarding-tip">
+              <svg
+                class="w-5 h-5 text-accent-500 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <span>Use the built-in timer to track your focus time!</span>
+            </div>
+          </div>
+
+          <!-- Step 3: Powerful Features -->
+          <div class="onboarding-step hidden" data-step="3">
+            <div class="onboarding-icon">
+              <svg
+                class="w-16 h-16 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+            </div>
+            <h2 class="onboarding-title">Powerful Features</h2>
+            <div class="onboarding-features">
+              <div class="onboarding-feature">
+                <span class="onboarding-feature-icon">🚫</span>
+                <div>
+                  <strong>Do Not Do List</strong>
+                  <p>Avoid distractions by listing what not to do today</p>
+                </div>
+              </div>
+              <div class="onboarding-feature">
+                <span class="onboarding-feature-icon">🧠</span>
+                <div>
+                  <strong>Brain Dump</strong>
+                  <p>Capture random thoughts without losing focus</p>
+                </div>
+              </div>
+              <div class="onboarding-feature">
+                <span class="onboarding-feature-icon">✨</span>
+                <div>
+                  <strong>Daily Reflection</strong>
+                  <p>Review what went well and what to improve</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Ideas & Notes -->
+          <div class="onboarding-step hidden" data-step="4">
+            <div class="onboarding-icon">
+              <svg
+                class="w-16 h-16 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                />
+              </svg>
+            </div>
+            <h2 class="onboarding-title">Ideas & Notes</h2>
+            <p class="onboarding-text">
+              Beyond daily tasks, manage your projects and ideas:
+            </p>
+            <div class="onboarding-features">
+              <div class="onboarding-feature">
+                <span class="onboarding-feature-icon">💡</span>
+                <div>
+                  <strong>Ideas</strong>
+                  <p>Break down big ideas into actionable todos</p>
+                </div>
+              </div>
+              <div class="onboarding-feature">
+                <span class="onboarding-feature-icon">📝</span>
+                <div>
+                  <strong>Notes</strong>
+                  <p>Keep all your important notes in one place</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 5: Get Started -->
+          <div class="onboarding-step hidden" data-step="5">
+            <div class="onboarding-icon success">
+              <svg
+                class="w-16 h-16 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <h2 class="onboarding-title">You're All Set!</h2>
+            <p class="onboarding-text">
+              Ready to boost your productivity? Start by adding your first task
+              or setting your North Star Goal.
+            </p>
+            <div class="onboarding-tip">
+              <svg
+                class="w-5 h-5 text-accent-500 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <span
+                >You can customize themes and settings from the settings
+                menu</span
+              >
+            </div>
+          </div>
+
+          <!-- Navigation -->
+          <div class="onboarding-navigation">
+            <button id="onboarding-skip" class="onboarding-btn-skip">
+              Skip
+            </button>
+            <div class="onboarding-dots">
+              <span class="onboarding-dot active" data-dot="1"></span>
+              <span class="onboarding-dot" data-dot="2"></span>
+              <span class="onboarding-dot" data-dot="3"></span>
+              <span class="onboarding-dot" data-dot="4"></span>
+              <span class="onboarding-dot" data-dot="5"></span>
+            </div>
+            <button id="onboarding-next" class="onboarding-btn-next">
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+
       <header
         class="sticky top-0 z-50 glass-header border-b border-gray-200/50 dark:border-gray-800/50"
       >
