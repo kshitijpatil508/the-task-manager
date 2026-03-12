@@ -838,7 +838,7 @@ body {
 }
 
 .reflection-unlocked #reflection-icon {
-  background: linear-gradient(135deg, rgb(var(--ac-500)), #6d28d9) !important;
+  background: linear-gradient(135deg, rgb(var(--ac-500)), rgb(var(--ac-600))) !important;
 }
 
 /* ===== CALENDAR ===== */
@@ -1356,6 +1356,35 @@ body::before {
     rgb(var(--ac-500)),
     rgb(var(--ac-600))
   ) !important;
+}
+
+/* Reflection icon unlocked state hardcodes a purple stop — override it with accent when accent-icons is on.
+   Needs higher specificity than .reflection-unlocked #reflection-icon (1,1,0) */
+.accent-icons .reflection-unlocked #reflection-icon {
+  background: linear-gradient(
+    135deg,
+    rgb(var(--ac-500)),
+    rgb(var(--ac-600))
+  ) !important;
+}
+
+/* Section input/textarea focus rings use accent color when accent-icons is on */
+.accent-icons .bento-reward textarea:focus,
+.accent-icons .bento-braindump textarea:focus,
+.accent-icons .bento-antitodo #antitodo-input:focus,
+.accent-icons .bento-reflection .reflection-field:focus {
+  --tw-ring-color: rgb(var(--ac-500) / 0.5) !important;
+}
+
+/* Do-Not-Do uses CSS-only focus — override border to accent when accent-icons is on */
+.accent-icons .donotdo-input:focus {
+  border-color: rgb(var(--ac-500)) !important;
+  background: rgb(var(--ac-500) / 0.06) !important;
+}
+
+.dark .accent-icons .donotdo-input:focus {
+  border-color: rgb(var(--ac-400)) !important;
+  background: rgb(var(--ac-500) / 0.1) !important;
 }
 
 .accent-icons .card:hover {
