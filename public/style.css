@@ -1358,6 +1358,14 @@ body::before {
   ) !important;
 }
 
+.accent-icons .card:hover {
+  border-color: rgb(var(--ac-400) / 0.4);
+}
+
+.dark .accent-icons .card:hover {
+  border-color: rgb(var(--ac-500) / 0.5);
+}
+
 /* ===== CUSTOM COLOR PICKER MODAL ===== */
 .color-picker-modal {
   position: fixed;
