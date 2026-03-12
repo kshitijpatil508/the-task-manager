@@ -838,7 +838,11 @@ body {
 }
 
 .reflection-unlocked #reflection-icon {
-  background: linear-gradient(135deg, rgb(var(--ac-500)), rgb(var(--ac-600))) !important;
+  background: linear-gradient(
+    135deg,
+    rgb(var(--ac-500)),
+    rgb(var(--ac-600))
+  ) !important;
 }
 
 /* ===== CALENDAR ===== */
