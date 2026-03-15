@@ -1292,6 +1292,35 @@ body {
   box-shadow: 0 4px 12px rgb(var(--ac-600) / 0.3);
 }
 
+.idea-todo-item {
+  cursor: grab;
+}
+
+.idea-todo-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+  border-color: rgb(var(--ac-500) / 0.8);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  background: var(--bg-card);
+}
+
+.idea-todo-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.idea-todo-item:hover .idea-todo-handle {
+  color: rgb(var(--ac-600));
+}
+
+.idea-todo-item:active {
+  cursor: grabbing;
+}
+
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar {
   width: 6px;

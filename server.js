@@ -94,6 +94,7 @@ const IdeaTodoSchema = new mongoose.Schema({
   id: { type: String, required: true },
   title: { type: String, required: true },
   completed: { type: Boolean, default: false },
+  order: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 IdeaTodoSchema.index({ userId: 1, id: 1 }, { unique: true });
@@ -176,10 +177,16 @@ async function migrateUser(user) {
       Array.isArray(rawUser.ideaTodos) &&
       rawUser.ideaTodos.length > 0
     ) {
-      const ops = rawUser.ideaTodos.map((todo) => ({
+      const ops = rawUser.ideaTodos.map((todo, index) => ({
         updateOne: {
           filter: { userId: uid, id: todo.id },
-          update: { $setOnInsert: { userId: uid, ...todo } },
+          update: {
+            $setOnInsert: {
+              userId: uid,
+              ...todo,
+              order: Number.isFinite(todo.order) ? todo.order : index,
+            },
+          },
           upsert: true,
         },
       }));
@@ -873,7 +880,7 @@ app.get("/api/idea-todos", authenticate, async (req, res) => {
   const todos = await IdeaTodo.find(
     { userId: req.userId },
     { _id: 0, userId: 0, __v: 0 },
-  ).sort({ createdAt: 1 });
+  ).sort({ order: 1, createdAt: 1 });
   res.json({ ideaTodos: todos });
 });
 
@@ -881,10 +888,16 @@ app.post("/api/idea-todos", authenticate, async (req, res) => {
   const { title } = req.body;
   if (!title || typeof title !== "string" || !title.trim())
     return res.status(400).json({ error: "Title is required" });
+  const lastTodo = await IdeaTodo.findOne(
+    { userId: req.userId },
+    { order: 1, _id: 0 },
+  ).sort({ order: -1, createdAt: -1 });
+
   const todo = new IdeaTodo({
     userId: req.userId,
     id: genId(),
     title: title.trim().slice(0, MAX_TEXT_LENGTH),
+    order: typeof lastTodo?.order === "number" ? lastTodo.order + 1 : 0,
   });
   await todo.save();
   res.status(201).json({
@@ -893,13 +906,47 @@ app.post("/api/idea-todos", authenticate, async (req, res) => {
       id: todo.id,
       title: todo.title,
       completed: todo.completed,
+      order: todo.order,
       createdAt: todo.createdAt,
     },
   });
 });
 
+app.post("/api/idea-todos/reorder", authenticate, async (req, res) => {
+  const { orderedIds } = req.body;
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    return res
+      .status(400)
+      .json({ error: "orderedIds must be a non-empty array" });
+  }
+
+  const todos = await IdeaTodo.find({ userId: req.userId }, { id: 1, _id: 0 });
+  if (orderedIds.length !== todos.length) {
+    return res.status(400).json({ error: "orderedIds length mismatch" });
+  }
+
+  const existingIdSet = new Set(todos.map((todo) => todo.id));
+  const incomingIdSet = new Set(orderedIds);
+  if (
+    incomingIdSet.size !== orderedIds.length ||
+    orderedIds.some((id) => !existingIdSet.has(id))
+  ) {
+    return res.status(400).json({ error: "orderedIds contain invalid IDs" });
+  }
+
+  const ops = orderedIds.map((id, index) => ({
+    updateOne: {
+      filter: { userId: req.userId, id },
+      update: { $set: { order: index } },
+    },
+  }));
+  if (ops.length > 0) await IdeaTodo.bulkWrite(ops);
+
+  res.json({ success: true });
+});
+
 app.put("/api/idea-todos/:id", authenticate, async (req, res) => {
-  const { title, completed } = req.body;
+  const { title, completed, order } = req.body;
   const todo = await IdeaTodo.findOne({
     userId: req.userId,
     id: req.params.id,
@@ -911,6 +958,9 @@ app.put("/api/idea-todos/:id", authenticate, async (req, res) => {
     todo.title = title.trim().slice(0, MAX_TEXT_LENGTH);
   }
   if (completed !== undefined) todo.completed = !!completed;
+  if (order !== undefined && Number.isFinite(order)) {
+    todo.order = order;
+  }
   await todo.save();
   res.json({
     success: true,
@@ -918,6 +968,7 @@ app.put("/api/idea-todos/:id", authenticate, async (req, res) => {
       id: todo.id,
       title: todo.title,
       completed: todo.completed,
+      order: todo.order,
       createdAt: todo.createdAt,
     },
   });
@@ -1191,7 +1242,7 @@ app.post(
       }
       // Import ideaTodos
       if (Array.isArray(importData.ideaTodos)) {
-        for (const todo of importData.ideaTodos) {
+        for (const [index, todo] of importData.ideaTodos.entries()) {
           if (!todo || !todo.id) continue;
           await IdeaTodo.findOneAndUpdate(
             { userId: uid, id: todo.id },
@@ -1201,6 +1252,7 @@ app.post(
                 id: todo.id,
                 title: todo.title || "",
                 completed: !!todo.completed,
+                order: Number.isFinite(todo.order) ? todo.order : index,
                 createdAt: todo.createdAt || new Date(),
               },
             },

@@ -18,6 +18,7 @@ let northStarGoal = "";
 let currentIdeas = [];
 let currentIdeaTodos = [];
 let showDoneIdeaTodos = false;
+let ideaTodoOrderDirty = false;
 let currentNotes = [];
 let activeNoteId = null;
 let activeIdeaId = null;
@@ -1365,10 +1366,11 @@ function renderAntiToDo() {
     div.className = "antitodo-item";
     div.innerHTML = `
       <svg class="w-4 h-4 antitodo-check" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-      <span class="flex-1 text-sm">${escHtml(item)}</span>
+      <span class="flex-1 text-sm text-gray-700 dark:text-gray-200 break-all">${escHtml(item)}</span>
       ${past ? "" : `<span class="antitodo-remove" data-idx="${i}">✕</span>`}`;
     list.appendChild(div);
   });
+
   list.querySelectorAll(".antitodo-remove").forEach((btn) => {
     btn.addEventListener("click", () => {
       currentDailyData.antiToDo.splice(parseInt(btn.dataset.idx), 1);
@@ -1741,6 +1743,138 @@ const ideaModal = document.getElementById("idea-modal");
 const ideaModalTitle = document.getElementById("idea-modal-title");
 const ideaModalBody = document.getElementById("idea-modal-body");
 
+let ideaAutosaveDirty = false;
+let ideaAutosaveInFlight = false;
+let ideaAutosaveCreateInFlight = false;
+let ideaAutosaveLastSaved = { title: "", body: "" };
+
+function setIdeaModalStatus(text, visible = true) {
+  const statusEl = document.getElementById("idea-modal-status");
+  if (!statusEl) return;
+  if (text !== undefined) statusEl.textContent = text;
+  statusEl.style.opacity = visible ? "1" : "0";
+}
+
+function getIdeaModalPayload() {
+  const title = (ideaModalTitle?.value || "").trim();
+  const body = (ideaModalBody?.value || "").trim();
+  return { title, body };
+}
+
+function scheduleIdeaAutosave() {
+  if (!ideaModal || ideaModal.classList.contains("hidden")) return;
+  // Avoid spamming the backend as user types
+  debounce(
+    "idea-modal-autosave",
+    () => {
+      flushIdeaAutosave({ silent: true });
+    },
+    700,
+  );
+}
+
+async function flushIdeaAutosave({
+  silent = false,
+  closeAfter = false,
+  force = false,
+} = {}) {
+  if (!ideaModal || ideaModal.classList.contains("hidden")) return;
+  if (ideaAutosaveInFlight) return;
+  if (!force && !ideaAutosaveDirty) {
+    if (closeAfter) hideIdeaModal();
+    return;
+  }
+
+  const { title, body } = getIdeaModalPayload();
+  if (!title) {
+    // Backend requires a title; don't autosave empty drafts.
+    if (closeAfter) hideIdeaModal();
+    return;
+  }
+
+  if (
+    !force &&
+    title === ideaAutosaveLastSaved.title &&
+    body === ideaAutosaveLastSaved.body
+  ) {
+    ideaAutosaveDirty = false;
+    if (closeAfter) hideIdeaModal();
+    return;
+  }
+
+  ideaAutosaveInFlight = true;
+  if (!silent) setIdeaModalStatus("Saving...");
+
+  try {
+    if (activeIdeaId) {
+      const res = await fetch(`/api/ideas/${activeIdeaId}`, {
+        method: "PUT",
+        headers: headers(),
+        body: JSON.stringify({ title, body }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const idx = currentIdeas.findIndex((i) => i.id === activeIdeaId);
+        if (idx !== -1) {
+          currentIdeas[idx] = {
+            ...currentIdeas[idx],
+            title: data.idea.title,
+            body: data.idea.body,
+          };
+        }
+        ideaAutosaveLastSaved = {
+          title: data.idea.title,
+          body: data.idea.body || "",
+        };
+        ideaAutosaveDirty = false;
+        renderIdeas();
+        if (!silent) {
+          setIdeaModalStatus("✓ Saved");
+          setTimeout(() => setIdeaModalStatus(undefined, false), 1000);
+        }
+      }
+    } else if (!ideaAutosaveCreateInFlight) {
+      ideaAutosaveCreateInFlight = true;
+      const res = await fetch("/api/ideas", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ title, body }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentIdeas.push(data.idea);
+        activeIdeaId = data.idea.id;
+        ideaAutosaveLastSaved = {
+          title: data.idea.title,
+          body: data.idea.body || "",
+        };
+        ideaAutosaveDirty = false;
+        renderIdeas();
+        if (!silent) {
+          setIdeaModalStatus("✓ Saved");
+          setTimeout(() => setIdeaModalStatus(undefined, false), 1000);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("autosaveIdea:", e);
+    if (!silent) {
+      setIdeaModalStatus("Could not save", true);
+      setTimeout(() => setIdeaModalStatus(undefined, false), 1200);
+    }
+  } finally {
+    ideaAutosaveInFlight = false;
+    ideaAutosaveCreateInFlight = false;
+  }
+
+  if (closeAfter) hideIdeaModal();
+}
+
+function hideIdeaModal() {
+  ideaModal.classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
 function openIdeaModal(id) {
   activeIdeaId = id;
   const titleEl = document.getElementById("idea-modal-title");
@@ -1751,10 +1885,15 @@ function openIdeaModal(id) {
     if (!idea) return;
     titleEl.value = idea.title;
     bodyEl.value = idea.body || "";
+    ideaAutosaveLastSaved = { title: idea.title || "", body: idea.body || "" };
   } else {
     titleEl.value = "";
     bodyEl.value = "";
+    ideaAutosaveLastSaved = { title: "", body: "" };
   }
+
+  ideaAutosaveDirty = false;
+  setIdeaModalStatus(undefined, false);
 
   ideaModal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
@@ -1762,8 +1901,8 @@ function openIdeaModal(id) {
 }
 
 function closeIdeaModal() {
-  ideaModal.classList.add("hidden");
-  document.body.style.overflow = "";
+  // Best-effort flush before closing so accidental closes don't lose work.
+  flushIdeaAutosave({ silent: false, closeAfter: true, force: true });
 }
 
 document
@@ -1771,72 +1910,56 @@ document
   .addEventListener("click", closeIdeaModal);
 document.getElementById("idea-modal-delete").addEventListener("click", () => {
   if (activeIdeaId) deleteIdea(activeIdeaId);
-  closeIdeaModal();
+  hideIdeaModal();
 });
 
 document
   .getElementById("idea-modal-save")
   .addEventListener("click", async () => {
     const title = ideaModalTitle.value.trim();
-    const body = ideaModalBody.value.trim();
     if (!title) {
       ideaModalTitle.focus();
       return;
     }
-
-    const statusEl = document.getElementById("idea-modal-status");
-    statusEl.style.opacity = "1";
-
-    if (activeIdeaId) {
-      // Update existing
-      try {
-        const res = await fetch(`/api/ideas/${activeIdeaId}`, {
-          method: "PUT",
-          headers: headers(),
-          body: JSON.stringify({ title, body }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const idx = currentIdeas.findIndex((i) => i.id === activeIdeaId);
-          if (idx !== -1)
-            currentIdeas[idx] = {
-              ...currentIdeas[idx],
-              title: data.idea.title,
-              body: data.idea.body,
-            };
-          renderIdeas();
-          statusEl.textContent = "✓ Saved";
-          setTimeout(() => closeIdeaModal(), 400);
-        }
-      } catch (e) {
-        console.error("saveIdea:", e);
-      }
-    } else {
-      // Create new
-      try {
-        const res = await fetch("/api/ideas", {
-          method: "POST",
-          headers: headers(),
-          body: JSON.stringify({ title, body }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          currentIdeas.push(data.idea);
-          renderIdeas();
-          statusEl.textContent = "✓ Created";
-          setTimeout(() => closeIdeaModal(), 400);
-        }
-      } catch (e) {
-        console.error("addIdea:", e);
-      }
-    }
-
-    setTimeout(() => (statusEl.style.opacity = "0"), 1000);
+    await flushIdeaAutosave({ silent: false, closeAfter: true, force: true });
   });
 
 // Hide modal on backdrop click
 ideaModal.addEventListener("click", (e) => {
   if (e.target === ideaModal) closeIdeaModal();
+});
+
+// Autosave on typing
+ideaModalTitle?.addEventListener("input", () => {
+  ideaAutosaveDirty = true;
+  scheduleIdeaAutosave();
+});
+ideaModalBody?.addEventListener("input", () => {
+  ideaAutosaveDirty = true;
+  scheduleIdeaAutosave();
+});
+
+// Best-effort save when the user refreshes/navigates away.
+window.addEventListener("beforeunload", () => {
+  if (!ideaModal || ideaModal.classList.contains("hidden")) return;
+  if (!ideaAutosaveDirty || ideaAutosaveInFlight || ideaAutosaveCreateInFlight)
+    return;
+
+  const { title, body } = getIdeaModalPayload();
+  if (!title) return;
+
+  try {
+    const url = activeIdeaId ? `/api/ideas/${activeIdeaId}` : "/api/ideas";
+    const method = activeIdeaId ? "PUT" : "POST";
+    fetch(url, {
+      method,
+      headers: headers(),
+      body: JSON.stringify({ title, body }),
+      keepalive: true,
+    });
+  } catch {
+    // ignore
+  }
 });
 
 async function deleteIdea(id) {
@@ -1874,19 +1997,24 @@ async function loadIdeaTodos() {
 function renderIdeaTodos() {
   const list = document.getElementById("idea-todo-list");
   list.innerHTML = "";
+  setupIdeaTodoDragAndDrop(list);
 
   const filterBtn = document.getElementById("idea-todo-filter-btn");
   if (filterBtn) {
     filterBtn.textContent = showDoneIdeaTodos ? "Show Active" : "Show Done";
   }
 
-  [...currentIdeaTodos].reverse().forEach((todo) => {
-    // Check if we should render this todo based on current filter state
-    if (showDoneIdeaTodos && !todo.completed) return;
-    if (!showDoneIdeaTodos && todo.completed) return;
+  const visibleTodos = currentIdeaTodos.filter((todo) => {
+    if (showDoneIdeaTodos) return todo.completed;
+    return !todo.completed;
+  });
 
+  visibleTodos.forEach((todo) => {
     const item = document.createElement("div");
-    item.className = `flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/30 transition-all ${todo.completed ? "opacity-60" : "hover:shadow-md"}`;
+    item.className = `idea-todo-item flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/30 transition-all ${todo.completed ? "opacity-60" : "hover:shadow-md"}`;
+    item.dataset.todoId = todo.id;
+    // We will only make it draggable when interacting with the handle
+    item.draggable = false;
 
     // Checkbox mapping completed state
     const checkBtn = document.createElement("button");
@@ -1899,6 +2027,33 @@ function renderIdeaTodos() {
     const titleSpan = document.createElement("span");
     titleSpan.className = `flex-1 text-sm font-medium ${todo.completed ? "line-through text-gray-400" : "text-gray-700 dark:text-gray-200"} cursor-pointer break-all`;
     titleSpan.textContent = todo.title;
+
+    const dragHandle = document.createElement("span");
+    dragHandle.className =
+      "idea-todo-handle cursor-grab active:cursor-grabbing";
+    dragHandle.title = "Drag to reorder";
+    dragHandle.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6h.01M10 12h.01M10 18h.01M14 6h.01M14 12h.01M14 18h.01"/></svg>`;
+
+    // Enable dragging only when the user interacts with the handle
+    dragHandle.addEventListener("mousedown", () => {
+      item.draggable = true;
+    });
+    dragHandle.addEventListener("mouseup", () => {
+      item.draggable = false;
+    });
+    dragHandle.addEventListener("mouseleave", () => {
+      item.draggable = false;
+    });
+    dragHandle.addEventListener(
+      "touchstart",
+      () => {
+        item.draggable = true;
+      },
+      { passive: true },
+    );
+    dragHandle.addEventListener("touchend", () => {
+      item.draggable = false;
+    });
 
     // Delete btn
     const delBtn = document.createElement("button");
@@ -1920,12 +2075,140 @@ function renderIdeaTodos() {
       startEditIdeaTodo(todo, titleSpan),
     );
     delBtn.addEventListener("click", () => deleteIdeaTodo(todo.id));
+    item.addEventListener("dragstart", onIdeaTodoDragStart);
+    item.addEventListener("dragend", onIdeaTodoDragEnd);
 
     item.appendChild(checkBtn);
     item.appendChild(titleSpan);
+    item.appendChild(dragHandle);
     item.appendChild(delBtn);
     list.appendChild(item);
   });
+}
+
+function setupIdeaTodoDragAndDrop(list) {
+  if (!list || list.dataset.dndBound === "true") return;
+
+  list.dataset.dndBound = "true";
+  list.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    const draggingItem = list.querySelector(".idea-todo-item.dragging");
+    if (!draggingItem) return;
+
+    const afterElement = getIdeaTodoDragAfterElement(list, e.clientY);
+    if (!afterElement) {
+      if (list.lastElementChild !== draggingItem) {
+        list.appendChild(draggingItem);
+        ideaTodoOrderDirty = true;
+      }
+      return;
+    }
+
+    if (
+      afterElement !== draggingItem &&
+      afterElement.previousElementSibling !== draggingItem
+    ) {
+      list.insertBefore(draggingItem, afterElement);
+      ideaTodoOrderDirty = true;
+    }
+  });
+
+  list.addEventListener("drop", (e) => {
+    e.preventDefault();
+  });
+}
+
+function getIdeaTodoDragAfterElement(container, y) {
+  const items = [
+    ...container.querySelectorAll(".idea-todo-item:not(.dragging)"),
+  ];
+
+  return items.reduce(
+    (closest, item) => {
+      const box = item.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: item };
+      }
+      return closest;
+    },
+    { offset: Number.NEGATIVE_INFINITY, element: null },
+  ).element;
+}
+
+function onIdeaTodoDragStart(e) {
+  const item = e.currentTarget;
+  item.classList.add("dragging");
+  ideaTodoOrderDirty = false;
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", item.dataset.todoId || "");
+    // Hide ghost image by default, using simple standard transfer
+  }
+}
+
+async function onIdeaTodoDragEnd(e) {
+  const item = e.currentTarget;
+  item.classList.remove("dragging");
+  item.draggable = false;
+
+  if (!ideaTodoOrderDirty) return;
+
+  const list = document.getElementById("idea-todo-list");
+  const visibleIds = [...list.querySelectorAll(".idea-todo-item")]
+    .map((el) => el.dataset.todoId)
+    .filter(Boolean);
+
+  if (visibleIds.length <= 1) {
+    ideaTodoOrderDirty = false;
+    return;
+  }
+
+  const reordered = applyVisibleIdeaTodoOrder(visibleIds);
+  ideaTodoOrderDirty = false;
+  if (!reordered) {
+    renderIdeaTodos();
+    return;
+  }
+
+  await saveIdeaTodoOrder();
+  renderIdeaTodos();
+}
+
+function applyVisibleIdeaTodoOrder(visibleIds) {
+  const todoMap = new Map(currentIdeaTodos.map((todo) => [todo.id, todo]));
+  const visibleSet = new Set(visibleIds);
+  const reorderedVisibleTodos = visibleIds
+    .map((id) => todoMap.get(id))
+    .filter(Boolean);
+
+  if (reorderedVisibleTodos.length !== visibleSet.size) return false;
+
+  let visibleIndex = 0;
+  currentIdeaTodos = currentIdeaTodos.map((todo) => {
+    if (!visibleSet.has(todo.id)) return todo;
+    const nextTodo = reorderedVisibleTodos[visibleIndex];
+    visibleIndex += 1;
+    return nextTodo;
+  });
+
+  currentIdeaTodos.forEach((todo, index) => {
+    todo.order = index;
+  });
+  return true;
+}
+
+async function saveIdeaTodoOrder() {
+  try {
+    const orderedIds = currentIdeaTodos.map((todo) => todo.id);
+    await fetch("/api/idea-todos/reorder", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ orderedIds }),
+    });
+  } catch (e) {
+    console.error("saveIdeaTodoOrder:", e);
+  }
 }
 
 document
