@@ -2735,6 +2735,47 @@ body::before {
   }
 
   .habits-stats-legend {
+    margin-top: 0.45rem;
+  }
+
+  /* Final mobile safety overrides for habit visibility */
+  @media (max-width: 700px) {
+    .habits-view-layout {
+      display: block;
+      min-height: auto !important;
+      padding-bottom: 1rem;
+    }
+
+    #habits-container.habits-horizontal-grid {
+      display: block;
+      min-height: 0 !important;
+      overflow: visible !important;
+      padding-bottom: 0.5rem;
+    }
+
+    #habits-container.habits-horizontal-grid .habit-card {
+      width: 100%;
+      max-width: none;
+      min-width: 0;
+      min-height: auto !important;
+      flex: none;
+      margin-bottom: 0.85rem;
+    }
+
+    #habits-container.habits-horizontal-grid .habit-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .heatmap-wrapper {
+      overflow: visible;
+    }
+
+    .habit-month-stats,
+    .habit-week-bars {
+      flex: none;
+    }
+  }
+  .habits-stats-legend {
     padding: 0.7rem 0.8rem;
   }
 
