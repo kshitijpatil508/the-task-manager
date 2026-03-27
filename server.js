@@ -109,12 +109,31 @@ const NoteSchema = new mongoose.Schema({
 });
 NoteSchema.index({ userId: 1, id: 1 }, { unique: true });
 
+const HabitSchema = new mongoose.Schema({
+  userId: { type: String, required: true, index: true },
+  id: { type: String, required: true },
+  name: { type: String, required: true },
+  type: { type: String, default: "binary" },
+  createdAt: { type: Date, default: Date.now },
+});
+HabitSchema.index({ userId: 1, id: 1 }, { unique: true });
+
+const HabitLogSchema = new mongoose.Schema({
+  userId: { type: String, required: true, index: true },
+  habitId: { type: String, required: true },
+  date: { type: String, required: true },
+  completed: { type: Boolean, default: false },
+});
+HabitLogSchema.index({ userId: 1, habitId: 1, date: 1 }, { unique: true });
+
 const User = mongoose.model("User", UserSchema);
 const TaskDay = mongoose.model("TaskDay", TaskDaySchema);
 const DailyData = mongoose.model("DailyData", DailyDataSchema);
 const Idea = mongoose.model("Idea", IdeaSchema);
 const IdeaTodo = mongoose.model("IdeaTodo", IdeaTodoSchema);
 const Note = mongoose.model("Note", NoteSchema);
+const Habit = mongoose.model("Habit", HabitSchema);
+const HabitLog = mongoose.model("HabitLog", HabitLogSchema);
 
 // ========== MIGRATION (old single-doc → separate collections) ==========
 async function migrateUser(user) {
@@ -1049,6 +1068,168 @@ app.delete("/api/notes/:id", authenticate, async (req, res) => {
   if (result.deletedCount === 0)
     return res.status(404).json({ error: "Note not found" });
   res.json({ success: true });
+});
+// ========== HABITS ROUTES ==========
+const MAX_HABITS = 5;
+
+app.get("/api/habits", authenticate, async (req, res) => {
+  try {
+    const habits = await Habit.find(
+      { userId: req.userId },
+      { _id: 0, userId: 0, __v: 0 },
+    ).sort({ createdAt: 1 });
+    res.json({ habits });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/habits", authenticate, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || typeof name !== "string" || !name.trim())
+      return res.status(400).json({ error: "Habit name is required" });
+    const count = await Habit.countDocuments({ userId: req.userId });
+    if (count >= MAX_HABITS)
+      return res.status(400).json({ error: "Maximum 5 habits allowed" });
+    const habit = new Habit({
+      userId: req.userId,
+      id: genId(),
+      name: name.trim().slice(0, MAX_TEXT_LENGTH),
+    });
+    await habit.save();
+    res.status(201).json({
+      success: true,
+      habit: {
+        id: habit.id,
+        name: habit.name,
+        type: habit.type,
+        createdAt: habit.createdAt,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.put("/api/habits/:id", authenticate, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || typeof name !== "string" || !name.trim())
+      return res.status(400).json({ error: "Habit name is required" });
+    const habit = await Habit.findOne({
+      userId: req.userId,
+      id: req.params.id,
+    });
+    if (!habit) return res.status(404).json({ error: "Habit not found" });
+    habit.name = name.trim().slice(0, MAX_TEXT_LENGTH);
+    await habit.save();
+    res.json({ success: true, habit: { id: habit.id, name: habit.name } });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.delete("/api/habits/:id", authenticate, async (req, res) => {
+  try {
+    const result = await Habit.deleteOne({
+      userId: req.userId,
+      id: req.params.id,
+    });
+    if (result.deletedCount === 0)
+      return res.status(404).json({ error: "Habit not found" });
+    await HabitLog.deleteMany({ userId: req.userId, habitId: req.params.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// POST /api/habits/:id/reset  — clears all logs for one habit, optional rename
+app.post("/api/habits/:id/reset", authenticate, async (req, res) => {
+  try {
+    const habit = await Habit.findOne({
+      userId: req.userId,
+      id: req.params.id,
+    });
+    if (!habit) return res.status(404).json({ error: "Habit not found" });
+
+    const { name } = req.body || {};
+    if (typeof name === "string" && name.trim()) {
+      habit.name = name.trim().slice(0, MAX_TEXT_LENGTH);
+      await habit.save();
+    }
+
+    const deleted = await HabitLog.deleteMany({
+      userId: req.userId,
+      habitId: req.params.id,
+    });
+
+    res.json({
+      success: true,
+      clearedLogs: deleted.deletedCount || 0,
+      habit: { id: habit.id, name: habit.name },
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET /api/habits/logs/:month  — month is YYYY-MM
+app.get("/api/habits/logs/:month", authenticate, async (req, res) => {
+  try {
+    const { month } = req.params;
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))
+      return res
+        .status(400)
+        .json({ error: "Invalid month format. Use YYYY-MM." });
+    const logs = await HabitLog.find(
+      { userId: req.userId, date: { $regex: `^${month}` } },
+      { _id: 0, userId: 0, __v: 0 },
+    );
+    res.json({ logs });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// POST /api/habits/toggle  — body: { habitId, date }
+app.post("/api/habits/toggle", authenticate, async (req, res) => {
+  try {
+    const { habitId, date } = req.body;
+    if (!habitId || !date)
+      return res.status(400).json({ error: "habitId and date are required" });
+    if (!isValidDate(date))
+      return res
+        .status(400)
+        .json({ error: "Invalid date format. Use YYYY-MM-DD." });
+    const habit = await Habit.findOne({ userId: req.userId, id: habitId });
+    if (!habit) return res.status(404).json({ error: "Habit not found" });
+
+    const existing = await HabitLog.findOne({
+      userId: req.userId,
+      habitId,
+      date,
+    });
+    let completed;
+    if (existing) {
+      existing.completed = !existing.completed;
+      await existing.save();
+      completed = existing.completed;
+    } else {
+      const log = new HabitLog({
+        userId: req.userId,
+        habitId,
+        date,
+        completed: true,
+      });
+      await log.save();
+      completed = true;
+    }
+    res.json({ success: true, completed });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // ========== TIMER SYNC ==========
