@@ -22,8 +22,11 @@ let ideaTodoOrderDirty = false;
 let currentNotes = [];
 let activeNoteId = null;
 let activeIdeaId = null;
-let currentView = "dashboard"; // 'dashboard' | 'ideas' | 'notes'
+let currentView = "dashboard"; // 'dashboard' | 'ideas' | 'notes' | 'habits'
 let currentPrefs = {};
+let currentHabits = [];
+let currentHabitLogs = [];
+
 // limit the number of tasks a user can create per day (backend enforces same)
 const MAX_TASKS = 5;
 const DEFAULT_TASKS = 3;
@@ -412,10 +415,12 @@ function switchView(view) {
   const dashView = document.getElementById("dashboard-view");
   const ideasView = document.getElementById("ideas-view");
   const notesView = document.getElementById("notes-view");
+  const habitsView = document.getElementById("habits-view");
 
   dashView.classList.toggle("hidden", view !== "dashboard");
   ideasView.classList.toggle("hidden", view !== "ideas");
   notesView.classList.toggle("hidden", view !== "notes");
+  if (habitsView) habitsView.classList.toggle("hidden", view !== "habits");
 
   // Update all nav tabs (both desktop and mobile)
   document.querySelectorAll(".app-nav-tab").forEach((tab) => {
@@ -427,6 +432,8 @@ function switchView(view) {
     loadIdeaTodos();
   } else if (view === "notes") {
     loadNotes();
+  } else if (view === "habits") {
+    loadHabits();
   }
 }
 
@@ -3092,3 +3099,643 @@ function logout() {
     restoreTimerState();
   }
 })();
+
+// ===== HABIT TRACKER (v2) =====
+const MAX_HABITS_LIMIT = 4;
+const DEFAULT_HABIT_NAMES = [
+  "Exercise",
+  "Drink Water",
+  "Reading",
+  "Journaling",
+];
+
+// Month state: { year, month } (0-indexed month, like JS Date)
+let habitViewMonth = (() => {
+  const d = new Date();
+  return { year: d.getFullYear(), month: d.getMonth() };
+})();
+
+function fmtToday() {
+  return fmt(new Date());
+}
+
+function fmtMonthStr(m) {
+  return `${m.year}-${String(m.month + 1).padStart(2, "0")}`;
+}
+
+function isCurrentMonth() {
+  const now = new Date();
+  return (
+    habitViewMonth.year === now.getFullYear() &&
+    habitViewMonth.month === now.getMonth()
+  );
+}
+
+// ---- Month Navigation ----
+function updateMonthLabel() {
+  const el = document.getElementById("habit-month-label");
+  if (!el) return;
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  el.textContent = `${monthNames[habitViewMonth.month]} ${habitViewMonth.year}`;
+  // Disable next if already at current month
+  const nextBtn = document.getElementById("habit-month-next");
+  if (nextBtn) {
+    nextBtn.disabled = isCurrentMonth();
+    nextBtn.style.opacity = isCurrentMonth() ? "0.3" : "";
+    nextBtn.style.cursor = isCurrentMonth() ? "not-allowed" : "";
+  }
+}
+
+async function changeHabitMonth(delta) {
+  habitViewMonth.month += delta;
+  if (habitViewMonth.month > 11) {
+    habitViewMonth.month = 0;
+    habitViewMonth.year++;
+  }
+  if (habitViewMonth.month < 0) {
+    habitViewMonth.month = 11;
+    habitViewMonth.year--;
+  }
+  updateMonthLabel();
+  // Reload logs for this month and re-render
+  await loadHabitLogs();
+  renderHabits();
+}
+
+// ---- Data Loading ----
+async function loadHabits() {
+  try {
+    const res = await fetch("/api/habits", { headers: headers() });
+    if (!res.ok) return;
+    const data = await res.json();
+    currentHabits = data.habits || [];
+
+    await normalizePreferredHabitNames();
+
+    // Always keep exactly 5 habits available for the fixed-card layout.
+    if (currentHabits.length < MAX_HABITS_LIMIT) {
+      await topUpHabitsToLimit(currentHabits.length);
+      const refreshed = await fetch("/api/habits", { headers: headers() });
+      if (refreshed.ok) {
+        const refreshedData = await refreshed.json();
+        currentHabits = refreshedData.habits || [];
+      }
+    }
+
+    await loadHabitLogs();
+    updateMonthLabel();
+    renderHabits();
+  } catch (e) {
+    console.error("loadHabits error:", e);
+  }
+}
+
+async function normalizePreferredHabitNames() {
+  if (!currentHabits.length) return;
+
+  const preferred = ["Exercise", "Drink Water"];
+  const maybePlaceholders = [/^habit\s*1$/i, /^habit\s*2$/i];
+
+  for (let i = 0; i < Math.min(2, currentHabits.length); i++) {
+    const habit = currentHabits[i];
+    if (!habit || !habit.name) continue;
+    if (!maybePlaceholders[i].test(habit.name.trim())) continue;
+
+    const newName = preferred[i];
+    if (habit.name === newName) continue;
+
+    habit.name = newName;
+    try {
+      await fetch(`/api/habits/${habit.id}`, {
+        method: "PUT",
+        headers: headers(),
+        body: JSON.stringify({ name: newName }),
+      });
+    } catch {}
+  }
+}
+
+async function loadHabitLogs() {
+  try {
+    const ms = fmtMonthStr(habitViewMonth);
+    const res = await fetch(`/api/habits/logs/${ms}`, { headers: headers() });
+    if (!res.ok) return;
+    const data = await res.json();
+    currentHabitLogs = data.logs || [];
+  } catch (e) {
+    console.error("loadHabitLogs error:", e);
+  }
+}
+
+async function initDefaultHabits() {
+  for (const name of DEFAULT_HABIT_NAMES) {
+    try {
+      await fetch("/api/habits", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ name }),
+      });
+    } catch {}
+  }
+  // Reload after creating defaults
+  const res = await fetch("/api/habits", { headers: headers() });
+  if (res.ok) {
+    const data = await res.json();
+    currentHabits = data.habits || [];
+  }
+  await loadHabitLogs();
+  updateMonthLabel();
+  renderHabits();
+}
+
+async function topUpHabitsToLimit(existingCount = 0) {
+  for (let i = existingCount; i < MAX_HABITS_LIMIT; i++) {
+    const fallbackName = `Habit ${i + 1}`;
+    const name = DEFAULT_HABIT_NAMES[i] || fallbackName;
+    try {
+      await fetch("/api/habits", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ name }),
+      });
+    } catch {}
+  }
+}
+
+// ---- Rendering ----
+function renderHabits() {
+  const container = document.getElementById("habits-container");
+  if (!container) return;
+
+  const habitsToRender = currentHabits.slice(0, MAX_HABITS_LIMIT);
+
+  if (habitsToRender.length === 0) {
+    container.innerHTML = `<div class="flex flex-col items-center justify-center w-full h-48 text-gray-400">
+      <p class="text-base font-medium">No habits yet</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = habitsToRender.map((h) => buildHabitCard(h)).join("");
+  habitsToRender.forEach((h) => attachCardEvents(h));
+}
+
+function buildHabitCard(habit) {
+  const todayStr = fmtToday();
+  const todayLog = currentHabitLogs.find(
+    (l) => l.habitId === habit.id && l.date === todayStr,
+  );
+  const isCompleted = todayLog ? todayLog.completed : false;
+  const streak = calcStreak(habit.id);
+  const isCurrent = isCurrentMonth();
+
+  return `
+    <div class="card habit-card" id="hcard-${habit.id}">
+      <!-- Name row -->
+      <div class="habit-card-top">
+        <span class="habit-name-text" id="hname-${habit.id}" title="Click to edit">${escHtml(habit.name)}</span>
+        <button
+          class="habit-action-icon-btn habit-reset-btn"
+          id="hreset-${habit.id}"
+          title="Reset habit data"
+          aria-label="Reset habit data"
+        >
+          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-13.66-5.66L4 5m16 14l-2.34 1.66A8 8 0 014 15"/>
+          </svg>
+        </button>
+      </div>
+      <!-- Meta row -->
+      <div class="habit-card-meta">
+        <span class="streak-badge ${streak > 0 ? "active" : ""}">🔥 ${streak}d</span>
+      </div>
+      <!-- Today toggle (only show for current month) -->
+      ${
+        isCurrent
+          ? `
+      <button class="habit-toggle-btn ${isCompleted ? "completed" : ""}" id="htog-${habit.id}">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+            d="${isCompleted ? "M5 13l4 4L19 7" : "M9 12l2 2 4-4"}"/>
+        </svg>
+        ${isCompleted ? "Done today ✓" : "Mark done"}
+      </button>
+      `
+          : ""
+      }
+      <!-- Heatmap -->
+      <div class="heatmap-wrapper">
+        ${buildHeatmap(habit)}
+      </div>
+      ${buildHabitMonthStats(habit)}
+    </div>
+  `;
+}
+
+function getHabitMonthStats(habitId) {
+  const now = new Date();
+  const todayYear = now.getFullYear();
+  const todayMonth = now.getMonth();
+  const todayDate = now.getDate();
+  const { year, month } = habitViewMonth;
+
+  const monthKey = fmtMonthStr(habitViewMonth);
+  const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDow = new Date(year, month, 1).getDay();
+  const weekCount = Math.ceil((firstDow + totalDaysInMonth) / 7);
+
+  let maxTrackDay = totalDaysInMonth;
+  if (year > todayYear || (year === todayYear && month > todayMonth)) {
+    maxTrackDay = 0;
+  } else if (year === todayYear && month === todayMonth) {
+    maxTrackDay = todayDate;
+  }
+
+  const completedSet = new Set();
+  currentHabitLogs
+    .filter(
+      (l) =>
+        l.habitId === habitId &&
+        l.completed === true &&
+        l.date.startsWith(monthKey),
+    )
+    .forEach((l) => completedSet.add(parseInt(l.date.slice(8), 10)));
+
+  let completedDays = 0;
+  let longestStreak = 0;
+  let activeStreak = 0;
+  let running = 0;
+
+  const weekly = Array.from({ length: weekCount }, () => ({
+    completed: 0,
+    possible: 0,
+  }));
+
+  for (let day = 1; day <= maxTrackDay; day++) {
+    const weekIndex = Math.floor((firstDow + day - 1) / 7);
+    weekly[weekIndex].possible++;
+
+    if (completedSet.has(day)) {
+      completedDays++;
+      weekly[weekIndex].completed++;
+      running++;
+      if (running > longestStreak) longestStreak = running;
+    } else {
+      running = 0;
+    }
+  }
+
+  for (let day = maxTrackDay; day >= 1; day--) {
+    if (completedSet.has(day)) activeStreak++;
+    else break;
+  }
+
+  const completionRate =
+    maxTrackDay > 0 ? Math.round((completedDays / maxTrackDay) * 100) : 0;
+
+  return {
+    completedDays,
+    completionRate,
+    longestStreak,
+    activeStreak,
+    weekly,
+  };
+}
+
+function buildHabitMonthStats(habit) {
+  const stats = getHabitMonthStats(habit.id);
+
+  const weeklyBars = stats.weekly
+    .map((w, idx) => {
+      const pct =
+        w.possible > 0 ? Math.round((w.completed / w.possible) * 100) : 0;
+      return `
+        <div class="habit-week-row">
+          <span class="habit-week-label">W${idx + 1}</span>
+          <div class="habit-week-track">
+            <div class="habit-week-fill" style="width:${pct}%"></div>
+          </div>
+          <span class="habit-week-value">${w.completed}/${w.possible}</span>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="habit-month-stats">
+      <div class="habit-stats-grid">
+        <div class="habit-stat-chip">
+          <span>Done</span>
+          <strong>${stats.completedDays}</strong>
+        </div>
+        <div class="habit-stat-chip">
+          <span>Rate</span>
+          <strong>${stats.completionRate}%</strong>
+        </div>
+        <div class="habit-stat-chip">
+          <span>Best</span>
+          <strong>${stats.longestStreak}d</strong>
+        </div>
+        <div class="habit-stat-chip">
+          <span>Active</span>
+          <strong>${stats.activeStreak}d</strong>
+        </div>
+      </div>
+      <div class="habit-week-bars">${weeklyBars}</div>
+    </div>
+  `;
+}
+
+// GitHub-style heatmap: rows=day-of-week (0=Sun…6=Sat), columns=weeks
+function buildHeatmap(habit) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = fmtToday();
+  const { year, month } = habitViewMonth;
+  const ms = fmtMonthStr(habitViewMonth);
+
+  // Build log lookup
+  const logMap = {};
+  currentHabitLogs
+    .filter((l) => l.habitId === habit.id && l.date.startsWith(ms))
+    .forEach((l) => {
+      logMap[l.date] = l.completed;
+    });
+
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  const firstDow = new Date(year, month, 1).getDay(); // 0=Sun
+
+  // Build a flat array of cells for the month, with leading empty slots
+  // Each entry: { dateStr, isFuture, isToday, completed } or null=empty
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null); // leading padding
+
+  for (let d = 1; d <= totalDays; d++) {
+    const dateStr = `${ms}-${String(d).padStart(2, "0")}`;
+    const cellDate = new Date(year, month, d);
+    cells.push({
+      dateStr,
+      isFuture: cellDate > today,
+      isToday: dateStr === todayStr,
+      completed: logMap[dateStr] === true,
+    });
+  }
+
+  // Pad tail to complete last week
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const weekRows = Math.ceil(cells.length / 7);
+  const DOW_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+
+  let dayHeaders = "";
+  for (const label of DOW_LABELS) {
+    dayHeaders += `<div class="hm-dow-cell">${label}</div>`;
+  }
+
+  let dayCells = "";
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    if (!cell) {
+      dayCells += `<div class="hm-day-cell hm-empty"></div>`;
+      continue;
+    }
+
+    const dayNum = parseInt(cell.dateStr.slice(8), 10);
+    if (cell.isFuture) {
+      dayCells += `<div class="hm-day-cell hm-future" title="${cell.dateStr}"><span class="hm-day-num">${dayNum}</span></div>`;
+      continue;
+    }
+
+    let cls = cell.completed ? "hm-done" : "hm-blank";
+    if (cell.isToday) cls += " hm-today";
+    const check = cell.completed ? " ✓" : "";
+    dayCells += `<div class="hm-day-cell ${cls}" title="${cell.dateStr}${check}"><span class="hm-day-num">${dayNum}</span></div>`;
+  }
+
+  return `
+    <div class="heatmap-fill" style="--hm-weeks:${weekRows}">
+      <div class="hm-dow-row">${dayHeaders}</div>
+      <div class="hm-days-grid">${dayCells}</div>
+    </div>
+  `;
+}
+
+// ---- Event wiring per card ----
+function attachCardEvents(habit) {
+  // Name click → inline edit
+  const nameEl = document.getElementById(`hname-${habit.id}`);
+  if (nameEl)
+    nameEl.addEventListener("click", () => startHabitNameEdit(habit.id));
+
+  // Today toggle
+  const togBtn = document.getElementById(`htog-${habit.id}`);
+  if (togBtn)
+    togBtn.addEventListener("click", () =>
+      toggleHabitDay(habit.id, fmtToday()),
+    );
+
+  const resetBtn = document.getElementById(`hreset-${habit.id}`);
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      showConfirmModal(
+        "Reset Habit Data",
+        "This clears all tracked history for this habit and lets you start fresh. Continue?",
+        () => resetHabitData(habit.id),
+      );
+    });
+  }
+}
+
+// ---- Streak ----
+function calcStreak(habitId) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let streak = 0;
+  let cursor = new Date(today);
+  // Streak uses ALL cached month logs — if crossing month boundary we only see this month's data.
+  // A proper multi-month streak would need extra fetches; approximate by stopping at month boundary.
+  while (true) {
+    const dateStr = fmt(cursor);
+    const log = currentHabitLogs.find(
+      (l) =>
+        l.habitId === habitId && l.date === dateStr && l.completed === true,
+    );
+    if (!log) break;
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+// ---- CRUD ----
+async function toggleHabitDay(habitId, date) {
+  const existingIdx = currentHabitLogs.findIndex(
+    (l) => l.habitId === habitId && l.date === date,
+  );
+  if (existingIdx !== -1) {
+    currentHabitLogs[existingIdx].completed =
+      !currentHabitLogs[existingIdx].completed;
+  } else {
+    currentHabitLogs.push({ habitId, date, completed: true });
+  }
+  renderHabits();
+  try {
+    const res = await fetch("/api/habits/toggle", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ habitId, date }),
+    });
+    if (!res.ok) loadHabits();
+  } catch {
+    loadHabits();
+  }
+}
+
+async function deleteHabit(habitId) {
+  currentHabits = currentHabits.filter((h) => h.id !== habitId);
+  currentHabitLogs = currentHabitLogs.filter((l) => l.habitId !== habitId);
+  renderHabits();
+  try {
+    await fetch(`/api/habits/${habitId}`, {
+      method: "DELETE",
+      headers: headers(),
+    });
+  } catch {
+    loadHabits();
+  }
+}
+
+async function resetHabitData(habitId) {
+  const habit = currentHabits.find((h) => h.id === habitId);
+  if (!habit) return;
+
+  const resetName = "New Habit";
+
+  currentHabitLogs = currentHabitLogs.filter((l) => l.habitId !== habitId);
+  currentHabits = currentHabits.map((h) =>
+    h.id === habitId ? { ...h, name: resetName } : h,
+  );
+  renderHabits();
+
+  try {
+    const res = await fetch(`/api/habits/${habitId}/reset`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ name: resetName }),
+    });
+
+    if (!res.ok) throw new Error("Reset failed");
+
+    const data = await res.json();
+    if (data && data.habit && data.habit.name) {
+      currentHabits = currentHabits.map((h) =>
+        h.id === habitId ? { ...h, name: data.habit.name } : h,
+      );
+      renderHabits();
+    }
+
+    // Immediately let user rename for a new tracking goal.
+    startHabitNameEdit(habitId);
+  } catch {
+    loadHabits();
+  }
+}
+
+function startHabitNameEdit(habitId) {
+  const nameEl = document.getElementById(`hname-${habitId}`);
+  if (!nameEl) return;
+  const habit = currentHabits.find((h) => h.id === habitId);
+  if (!habit) return;
+  const orig = habit.name;
+
+  // Replace span with input
+  const inp = document.createElement("input");
+  inp.type = "text";
+  inp.className = "habit-name-edit-input";
+  inp.value = orig;
+  inp.maxLength = 100;
+  nameEl.replaceWith(inp);
+  inp.focus();
+  inp.select();
+
+  async function commit() {
+    const newName = inp.value.trim();
+    if (newName && newName !== orig) {
+      const hi = currentHabits.findIndex((h) => h.id === habitId);
+      if (hi !== -1) currentHabits[hi].name = newName;
+      renderHabits();
+      try {
+        await fetch(`/api/habits/${habitId}`, {
+          method: "PUT",
+          headers: headers(),
+          body: JSON.stringify({ name: newName }),
+        });
+      } catch {
+        loadHabits();
+      }
+    } else {
+      renderHabits(); // just re-render to restore span
+    }
+  }
+
+  inp.addEventListener("blur", commit);
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      inp.blur();
+    }
+    if (e.key === "Escape") {
+      inp.value = orig;
+      inp.blur();
+    }
+  });
+}
+
+// ---- Reuse existing confirm modal ----
+function showConfirmModal(title, message, onConfirm) {
+  const modal = document.getElementById("confirm-modal");
+  const titleEl = document.getElementById("confirm-modal-title");
+  const msgEl = document.getElementById("confirm-modal-message");
+  const okBtn = document.getElementById("confirm-modal-ok");
+  const cancelBtn = document.getElementById("confirm-modal-cancel");
+  if (!modal) return;
+  if (titleEl) titleEl.textContent = title;
+  if (msgEl) msgEl.textContent = message;
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  function close() {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+    okBtn.removeEventListener("click", handleOk);
+    cancelBtn.removeEventListener("click", close);
+  }
+  function handleOk() {
+    close();
+    onConfirm();
+  }
+  okBtn.addEventListener("click", handleOk);
+  cancelBtn.addEventListener("click", close);
+}
+
+// ---- Month Nav Event Wiring ----
+document.addEventListener("DOMContentLoaded", () => {
+  const prevBtn = document.getElementById("habit-month-prev");
+  const nextBtn = document.getElementById("habit-month-next");
+  if (prevBtn) prevBtn.addEventListener("click", () => changeHabitMonth(-1));
+  if (nextBtn) nextBtn.addEventListener("click", () => changeHabitMonth(1));
+  updateMonthLabel();
+});

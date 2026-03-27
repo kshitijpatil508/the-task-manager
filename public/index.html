@@ -508,6 +508,17 @@
                 </svg>
                 Notes
               </button>
+              <button class="app-nav-tab" data-view="habits">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+                Habits
+              </button>
             </div>
             <button
               id="user-badge"
@@ -589,6 +600,23 @@
             />
           </svg>
           Notes
+        </button>
+        <button class="app-nav-tab" data-view="habits">
+          <svg
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+          Habits
         </button>
       </nav>
 
@@ -1369,6 +1397,104 @@
             </div>
           </div>
         </div>
+      </div>
+      <!-- ===== HABITS VIEW ===== -->
+      <div id="habits-view" class="hidden habits-view-layout px-4 sm:px-6 py-4">
+        <!-- Header row -->
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-bold">Habit Tracker</h2>
+            <p class="text-gray-500 dark:text-gray-400 text-xs mt-0.5">
+              Track consistency, not intensity
+            </p>
+          </div>
+          <!-- Global Month Navigator -->
+          <div class="flex items-center gap-2">
+            <button
+              id="habit-month-prev"
+              class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <span
+              id="habit-month-label"
+              class="text-sm font-bold min-w-[120px] text-center"
+            ></span>
+            <button
+              id="habit-month-next"
+              class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5 Habit cards horizontally -->
+        <div id="habits-container" class="habits-horizontal-grid">
+          <!-- Rendered by JS -->
+        </div>
+
+        <details
+          class="habits-stats-legend"
+          aria-label="Habit stats explanation"
+          open
+        >
+          <summary class="habits-stats-legend-title">
+            How To Read The Stats
+          </summary>
+          <div class="habits-stats-legend-content">
+            <div class="habits-stats-legend-grid">
+              <p class="habits-stats-legend-item">
+                <strong>Done:</strong> Total days completed in the selected
+                month (up to today).
+              </p>
+              <p class="habits-stats-legend-item">
+                <strong>Rate:</strong> Completion percentage for tracked days in
+                the selected month.
+              </p>
+              <p class="habits-stats-legend-item">
+                <strong>Best:</strong> Longest completion streak within the
+                selected month.
+              </p>
+              <p class="habits-stats-legend-item">
+                <strong>Active:</strong> Current ongoing streak ending today (or
+                latest tracked day).
+              </p>
+              <p class="habits-stats-legend-item">
+                <strong>W1-W5 Bars:</strong> Week-wise progress where the fill
+                shows completed days out of possible days.
+              </p>
+              <p class="habits-stats-legend-item">
+                <strong>Heatmap:</strong> Brighter cells are completed days;
+                dashed cells are future dates.
+              </p>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
 
