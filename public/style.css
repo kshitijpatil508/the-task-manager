@@ -2151,6 +2151,7 @@ body::before {
   width: 100%;
   aspect-ratio: 1 / 1;
   min-width: 0;
+  box-sizing: border-box;
   border-radius: 0.3rem;
   display: flex;
   align-items: center;
@@ -2195,7 +2196,7 @@ body::before {
 }
 
 .hm-day-cell.hm-today {
-  box-shadow: 0 0 0 1.5px rgb(var(--ac-500));
+  box-shadow: inset 0 0 0 2px rgb(var(--ac-500));
 }
 
 .hm-day-cell.hm-done .hm-day-num {
@@ -2451,7 +2452,7 @@ body::before {
 }
 
 .hm-cell.hm-today {
-  box-shadow: 0 0 0 1.5px rgb(var(--ac-500));
+  box-shadow: inset 0 0 0 2px rgb(var(--ac-500));
 }
 
 .hm-cell:hover:not(.hm-empty):not(.hm-future) {
@@ -2692,7 +2693,7 @@ body::before {
 }
 
 .heatmap-cell.today {
-  box-shadow: 0 0 0 2px rgb(var(--ac-500));
+  box-shadow: inset 0 0 0 2px rgb(var(--ac-500));
 }
 
 .heatmap-cell.future {
@@ -2734,6 +2735,47 @@ body::before {
     gap: 0.34rem;
   }
 
+  .habits-stats-legend {
+    margin-top: 0.45rem;
+  }
+
+  /* Final mobile safety overrides for habit visibility */
+  @media (max-width: 700px) {
+    .habits-view-layout {
+      display: block;
+      min-height: auto !important;
+      padding-bottom: 1rem;
+    }
+
+    #habits-container.habits-horizontal-grid {
+      display: block;
+      min-height: 0 !important;
+      overflow: visible !important;
+      padding-bottom: 0.5rem;
+    }
+
+    #habits-container.habits-horizontal-grid .habit-card {
+      width: 100%;
+      max-width: none;
+      min-width: 0;
+      min-height: auto !important;
+      flex: none;
+      margin-bottom: 0.85rem;
+    }
+
+    #habits-container.habits-horizontal-grid .habit-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .heatmap-wrapper {
+      overflow: visible;
+    }
+
+    .habit-month-stats,
+    .habit-week-bars {
+      flex: none;
+    }
+  }
   .habits-stats-legend {
     padding: 0.7rem 0.8rem;
   }
